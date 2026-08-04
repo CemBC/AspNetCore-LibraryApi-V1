@@ -4,3 +4,202 @@ GET {{LibraryApi_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
+
+GET {{LibraryApi_HostAddress}}/api/books/1
+Accept: application/json
+
+###
+
+GET {{LibraryApi_HostAddress}}/api/books/999
+Accept: application/json
+
+###
+
+POST {{LibraryApi_HostAddress}}/api/books
+Content-Type: application/json
+
+{
+  "title": "Dönüşüm",
+  "author": "Franz Kafka"
+}
+
+###
+
+PUT {{LibraryApi_HostAddress}}/api/books/2
+Content-Type: application/json
+
+{
+  "title": "Bin Dokuz Yüz Seksen Dört",
+  "author": "George Orwell"
+}
+
+###
+
+PUT {{LibraryApi_HostAddress}}/api/books/999
+Content-Type: application/json
+
+{
+  "title": "Deneme",
+  "author": "Deneme Yazarı"
+}
+
+###
+
+DELETE {{LibraryApi_HostAddress}}/api/books/2
+
+###
+
+
+###
+
+
+GET {{LibraryApi_HostAddress}}/api/members
+Accept: application/json
+
+###
+
+GET {{LibraryApi_HostAddress}}/api/members/1
+Accept: application/json
+
+###
+
+GET {{LibraryApi_HostAddress}}/api/members/999
+Accept: application/json
+
+###
+
+POST {{LibraryApi_HostAddress}}/api/members
+Content-Type: application/json
+
+{
+  "fullName": "Mehmet Kaya",
+  "email": "mehmet@example.com"
+}
+###
+GET {{LibraryApi_HostAddress}}/api/members/3
+Accept: application/json
+
+
+###
+PUT {{LibraryApi_HostAddress}}/api/members/2
+Content-Type: application/json
+
+{
+  "fullName": "Ayşe Demir Yılmaz",
+  "email": "ayse.yilmaz@example.com"
+}
+###
+GET {{LibraryApi_HostAddress}}/api/members/2
+Accept: application/json
+
+###
+PUT {{LibraryApi_HostAddress}}/api/members/999
+Content-Type: application/json
+
+{
+  "fullName": "Deneme Kullanıcı",
+  "email": "deneme@example.com"
+}
+
+###
+DELETE {{LibraryApi_HostAddress}}/api/members/2
+
+###
+
+
+
+### 
+GET {{LibraryApi_HostAddress}}/api/loans
+Accept: application/json
+
+
+### 
+GET {{LibraryApi_HostAddress}}/api/loans/999
+Accept: application/json
+
+
+### 
+POST {{LibraryApi_HostAddress}}/api/loans
+Content-Type: application/json
+
+{
+  "bookId": 1,
+  "memberId": 1
+}
+
+
+### 
+GET {{LibraryApi_HostAddress}}/api/loans/1
+Accept: application/json
+
+
+### 
+GET {{LibraryApi_HostAddress}}/api/books/1
+Accept: application/json
+
+
+### 
+POST {{LibraryApi_HostAddress}}/api/loans
+Content-Type: application/json
+
+{
+  "bookId": 1,
+  "memberId": 2
+}
+
+
+### 
+POST {{LibraryApi_HostAddress}}/api/loans
+Content-Type: application/json
+
+{
+  "bookId": 999,
+  "memberId": 1
+}
+
+
+### 
+POST {{LibraryApi_HostAddress}}/api/loans
+Content-Type: application/json
+
+{
+  "bookId": 2,
+  "memberId": 999
+}
+
+
+### 
+PUT {{LibraryApi_HostAddress}}/api/loans/1/return
+
+
+### 
+GET {{LibraryApi_HostAddress}}/api/loans/1
+Accept: application/json
+
+
+### 
+GET {{LibraryApi_HostAddress}}/api/books/1
+Accept: application/json
+
+
+### 
+PUT {{LibraryApi_HostAddress}}/api/loans/1/return
+
+
+### 
+PUT {{LibraryApi_HostAddress}}/api/loans/999/return
+
+
+### 
+POST {{LibraryApi_HostAddress}}/api/loans
+Content-Type: application/json
+
+{
+  "bookId": 1,
+  "memberId": 2
+}
+
+
+### 
+GET {{LibraryApi_HostAddress}}/api/loans
+Accept: application/json

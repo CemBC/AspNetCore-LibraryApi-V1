@@ -5,7 +5,7 @@ Accept: application/json
 
 ###
 
-GET {{LibraryApi_HostAddress}}/api/books/1
+GET {{LibraryApi_HostAddress}}/api/books
 Accept: application/json
 
 ###

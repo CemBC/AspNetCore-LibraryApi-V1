@@ -1,87 +1,146 @@
 ﻿using LibraryApi.Models;
+using Microsoft.Data.SqlClient;
 
 namespace LibraryApi.Services
 {
     public class MemberService
     {
-        private readonly List<Member> _members = new()
-        {
-            new Member
-            {
-                Id = 1,
-                FullName = "John Doe",
-                Email = "john.doe@example.com"
-            },
-            new Member
-            {
-                Id = 2,
-                FullName = "Jane Smith",
-                Email = "jane.smith@example.com"
-            }
-        };
+        private readonly string _connectionString;
 
-        public List<Member> GetAll() { return _members; }
+        public MemberService(IConfiguration configuration)
+        {
+            _connectionString =
+                configuration.GetConnectionString("LibraryDb")!;
+        }
+
+        public List<Member> GetAll()
+        {
+            List<Member> members = new();
+
+            using SqlConnection connection =
+                new SqlConnection(_connectionString);
+
+            connection.Open();
+
+            string query =
+                "SELECT Id, FullName, Email FROM Members";
+
+            using SqlCommand command =
+                new SqlCommand(query, connection);
+
+            using SqlDataReader reader =
+                command.ExecuteReader();
+
+            while (reader.Read())
+            {
+                Member member = new Member
+                {
+                    Id = reader.GetInt32(0),
+                    FullName = reader.GetString(1),
+                    Email = reader.GetString(2)
+                };
+
+                members.Add(member);
+            }
+
+            return members;
+        }
 
         public Member? GetById(int id)
         {
-            foreach (Member member in _members)
+            using SqlConnection connection =
+                new SqlConnection(_connectionString);
+
+            connection.Open();
+
+            string query =
+                "SELECT Id, FullName, Email FROM Members WHERE Id = @Id";
+
+            using SqlCommand command =
+                new SqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@Id", id);
+
+            using SqlDataReader reader =
+                command.ExecuteReader();
+
+            if (reader.Read())
             {
-                if (member.Id == id) return member;
+                return new Member
+                {
+                    Id = reader.GetInt32(0),
+                    FullName = reader.GetString(1),
+                    Email = reader.GetString(2)
+                };
             }
+
             return null;
         }
 
         public void AddMember(Member member)
         {
-            member.Id = GetNextId();
-            _members.Add(member);
-        }
+            using SqlConnection connection =
+                new SqlConnection(_connectionString);
 
-        private int GetNextId()
-        {
-            int highestId = 0;
+            connection.Open();
 
-            foreach (Member member in _members)
-            {
-                if (member.Id > highestId) highestId = member.Id;
-            }
+            string query =
+                @"INSERT INTO Members (FullName, Email)
+                  OUTPUT INSERTED.Id
+                  VALUES (@FullName, @Email)";
 
-            return highestId + 1;
+            using SqlCommand command =
+                new SqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@FullName", member.FullName);
+            command.Parameters.AddWithValue("@Email", member.Email);
+
+            member.Id = Convert.ToInt32(command.ExecuteScalar());
         }
 
         public bool Update(int id, Member updatedMember)
         {
-            foreach (Member member in _members)
-            {
-                if (member.Id == id)
-                {
-                    member.FullName = updatedMember.FullName;
-                    member.Email = updatedMember.Email;
+            using SqlConnection connection =
+                new SqlConnection(_connectionString);
 
-                    return true;
-                }
-            }
+            connection.Open();
 
-            return false;
+            string query =
+                @"UPDATE Members
+                  SET FullName = @FullName,
+                      Email = @Email
+                  WHERE Id = @Id";
+
+            using SqlCommand command =
+                new SqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@FullName", updatedMember.FullName);
+            command.Parameters.AddWithValue("@Email", updatedMember.Email);
+            command.Parameters.AddWithValue("@Id", id);
+
+            int affectedRows = command.ExecuteNonQuery();
+
+            return affectedRows > 0;
         }
 
         public bool Delete(int id)
         {
-            Member? memberToDelete = null;
-            foreach (Member member in _members)
-            {
-                if (member.Id == id)
-                {
-                    memberToDelete = member;
-                    break;
-                }
-            }
+            using SqlConnection connection =
+                new SqlConnection(_connectionString);
 
-            if (memberToDelete is null) return false;
-           
-            _members.Remove(memberToDelete);
+            connection.Open();
 
-            return true;
+            string query =
+                "DELETE FROM Members WHERE Id = @Id";
+
+            using SqlCommand command =
+                new SqlCommand(query, connection);
+
+            command.Parameters.AddWithValue("@Id", id);
+
+            int affectedRows = command.ExecuteNonQuery();
+
+            return affectedRows > 0;
         }
     }
 }

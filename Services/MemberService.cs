@@ -1,146 +1,59 @@
-﻿using LibraryApi.Models;
+﻿using LibraryApi.Data;
+using LibraryApi.Models;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace LibraryApi.Services
 {
     public class MemberService
     {
-        private readonly string _connectionString;
+        private readonly LibraryDbContext _context;
 
-        public MemberService(IConfiguration configuration)
+        public MemberService(LibraryDbContext context)
         {
-            _connectionString =
-                configuration.GetConnectionString("LibraryDb")!;
+            _context = context;
         }
 
-        public List<Member> GetAll()
+        public async Task<List<Member>> GetAll()
         {
-            List<Member> members = new();
-
-            using SqlConnection connection =
-                new SqlConnection(_connectionString);
-
-            connection.Open();
-
-            string query =
-                "SELECT Id, FullName, Email FROM Members";
-
-            using SqlCommand command =
-                new SqlCommand(query, connection);
-
-            using SqlDataReader reader =
-                command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                Member member = new Member
-                {
-                    Id = reader.GetInt32(0),
-                    FullName = reader.GetString(1),
-                    Email = reader.GetString(2)
-                };
-
-                members.Add(member);
-            }
-
-            return members;
+            return await _context.Members.AsNoTracking().ToListAsync();
         }
 
-        public Member? GetById(int id)
+        public async Task<Member?> GetById(int id)
         {
-            using SqlConnection connection =
-                new SqlConnection(_connectionString);
-
-            connection.Open();
-
-            string query =
-                "SELECT Id, FullName, Email FROM Members WHERE Id = @Id";
-
-            using SqlCommand command =
-                new SqlCommand(query, connection);
-
-            command.Parameters.AddWithValue("@Id", id);
-
-            using SqlDataReader reader =
-                command.ExecuteReader();
-
-            if (reader.Read())
-            {
-                return new Member
-                {
-                    Id = reader.GetInt32(0),
-                    FullName = reader.GetString(1),
-                    Email = reader.GetString(2)
-                };
-            }
-
-            return null;
+            return await _context.Members.AsNoTracking().
+                FirstOrDefaultAsync(m => m.Id == id);
         }
 
-        public void AddMember(Member member)
+        public async Task AddMember(Member member)
         {
-            using SqlConnection connection =
-                new SqlConnection(_connectionString);
-
-            connection.Open();
-
-            string query =
-                @"INSERT INTO Members (FullName, Email)
-                  OUTPUT INSERTED.Id
-                  VALUES (@FullName, @Email)";
-
-            using SqlCommand command =
-                new SqlCommand(query, connection);
-
-            command.Parameters.AddWithValue("@FullName", member.FullName);
-            command.Parameters.AddWithValue("@Email", member.Email);
-
-            member.Id = Convert.ToInt32(command.ExecuteScalar());
+             await _context.Members.AddAsync(member);
+            await _context.SaveChangesAsync();
         }
 
-        public bool Update(int id, Member updatedMember)
+        public async Task<bool> Update(int id, Member updatedMember)
         {
-            using SqlConnection connection =
-                new SqlConnection(_connectionString);
+            Member? member = await _context.Members.FindAsync(id);
+            if (member == null) return false;
 
-            connection.Open();
+            member.FullName = updatedMember.FullName;
+            member.Email = updatedMember.Email;
 
-            string query =
-                @"UPDATE Members
-                  SET FullName = @FullName,
-                      Email = @Email
-                  WHERE Id = @Id";
+            await _context.SaveChangesAsync();
 
-            using SqlCommand command =
-                new SqlCommand(query, connection);
-
-            command.Parameters.AddWithValue("@FullName", updatedMember.FullName);
-            command.Parameters.AddWithValue("@Email", updatedMember.Email);
-            command.Parameters.AddWithValue("@Id", id);
-
-            int affectedRows = command.ExecuteNonQuery();
-
-            return affectedRows > 0;
+            return true;
         }
 
-        public bool Delete(int id)
+        public async Task<bool> Delete(int id)
         {
-            using SqlConnection connection =
-                new SqlConnection(_connectionString);
+            Member? member = await _context.Members.FindAsync(id);
+            if (member == null) return false;
 
-            connection.Open();
+            _context.Members.Remove(member);
 
-            string query =
-                "DELETE FROM Members WHERE Id = @Id";
+            await _context.SaveChangesAsync();
 
-            using SqlCommand command =
-                new SqlCommand(query, connection);
-
-            command.Parameters.AddWithValue("@Id", id);
-
-            int affectedRows = command.ExecuteNonQuery();
-
-            return affectedRows > 0;
+            return true;
         }
     }
 }

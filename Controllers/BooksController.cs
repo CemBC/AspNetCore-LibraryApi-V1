@@ -16,40 +16,40 @@ namespace LibraryApi.Controllers
         }
 
         [HttpGet]
-        public ActionResult<List<Book>> GetAll()
+        public async Task<ActionResult<List<Book>>> GetAll()
         {
-            return _bookService.GetAll();
+            return await _bookService.GetAll();
         }
 
         [HttpGet("{id}")]
-        public ActionResult<Book> GetById(int id)
+        public async Task<ActionResult<Book>> GetById(int id)
         {
-            var book = _bookService.GetById(id);
+            var book = await _bookService.GetById(id);
             if (book == null) return NotFound();
             return book;
         }
 
         [HttpPost]
-        public ActionResult<Book> Create(Book book)
+        public async Task<ActionResult<Book>> Create(Book book)
         {
-            _bookService.AddBook(book);
+            await _bookService.AddBook(book);
             return CreatedAtAction(nameof(GetById), new { id = book.Id }, book);
         }
 
 
         [HttpPut("{id:int}")]
-        public ActionResult Update(int id, Book updatedBook)
+        public async Task<ActionResult> Update(int id, Book updatedBook)
         {
-            bool isUpdated = _bookService.Update(id, updatedBook);
+            bool isUpdated = await _bookService.Update(id, updatedBook);
             if (!isUpdated) return NotFound();
             return NoContent();
         }
 
 
         [HttpDelete("{id:int}")]
-        public ActionResult Delete(int id)
+        public async Task<ActionResult> Delete(int id)
         {
-            bool isDeleted = _bookService.Delete(id);
+            bool isDeleted = await _bookService.Delete(id);
 
             if (!isDeleted) return NotFound();
 

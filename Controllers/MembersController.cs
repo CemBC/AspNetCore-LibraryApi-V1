@@ -16,38 +16,38 @@ namespace LibraryApi.Controllers
 
 
         [HttpGet]
-        public ActionResult<List<Member>> Get()
+        public async Task<ActionResult<List<Member>>> Get()
         {
-            return _memberService.GetAll();
+            return await _memberService.GetAll();
         }
 
         [HttpGet("{id:int}")]
-        public ActionResult<Member> GetById(int id)
+        public async Task<ActionResult<Member>>  GetById(int id)
         {
-            var member = _memberService.GetById(id);
+            var member = await _memberService.GetById(id);
             if (member == null) return NotFound();
             return member;
         }
 
         [HttpPost]
-        public ActionResult<Member> Create(Member member)
+        public async Task<ActionResult<Member>> Create(Member member)
         {
-            _memberService.AddMember(member);
+            await _memberService.AddMember(member);
             return CreatedAtAction(nameof(GetById), new { id = member.Id }, member);
         }
 
         [HttpPut("{id}")]
-        public ActionResult<Member> Update(int id, Member updatedMember)
+        public async  Task<ActionResult<Member>> Update(int id, Member updatedMember)
         {
-            bool isUpdated = _memberService.Update(id, updatedMember);
+            bool isUpdated = await _memberService.Update(id, updatedMember);
             if (!isUpdated) return NotFound();
             return NoContent();
         }
 
         [HttpDelete("{id:int}")]
-        public ActionResult Delete(int id)
+        public async Task<ActionResult> Delete(int id)
         {
-            bool isDeleted = _memberService.Delete(id);
+            bool isDeleted = await _memberService.Delete(id);
             if(!isDeleted) return NotFound();
             return NoContent();
         }

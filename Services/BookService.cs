@@ -1,132 +1,67 @@
-﻿using LibraryApi.Models;
-using Microsoft.Data.SqlClient;
+﻿using LibraryApi.Data;
+using LibraryApi.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace LibraryApi.Services
 {
     public class BookService
     {
-        private readonly string _connectionString;
+        private readonly LibraryDbContext _context;
 
-        public BookService(IConfiguration configuration)
+        public BookService(LibraryDbContext context)
         {
-            _connectionString =
-                configuration.GetConnectionString("LibraryDb")!;
+            _context = context;
         }
 
-        public List<Book> GetAll()
+        public async Task<List<Book>> GetAll()
         {
-            List<Book> books = new();
-
-            using SqlConnection connection = new SqlConnection(_connectionString);
-            connection.Open();
-
-            string query = "SELECT Id, Title, Author, IsAvailable FROM Books";
-
-            using SqlCommand command = new SqlCommand(query, connection);
-
-            using SqlDataReader reader = command.ExecuteReader();
-
-            while (reader.Read())
-            {
-                Book book = new Book
-                {
-                    Id = reader.GetInt32(0),
-                    Title = reader.GetString(1),
-                    Author = reader.GetString(2),
-                    IsAvailable = reader.GetBoolean(3)
-                };
-
-                books.Add(book);
-            }
-
-            return books;
+            return await _context.Books
+                .AsNoTracking()
+                .ToListAsync();
         }
 
-        public Book? GetById(int id)
+        public async Task<Book?> GetById(int id)
         {
-            using SqlConnection connection = new SqlConnection(_connectionString);
-            connection.Open();
-
-            string query = "SELECT Id, Title, Author, IsAvailable FROM Books WHERE Id = @Id";
-
-            using SqlCommand command = new SqlCommand(query, connection);
-
-            command.Parameters.AddWithValue("@Id", id);
-
-            using SqlDataReader reader = command.ExecuteReader();
-
-            if (reader.Read())
-            {
-                return new Book
-                {
-                    Id = reader.GetInt32(0),
-                    Title = reader.GetString(1),
-                    Author = reader.GetString(2),
-                    IsAvailable = reader.GetBoolean(3)
-                };
-            }
-
-            return null;
+            return await _context.Books
+                .AsNoTracking()
+                .FirstOrDefaultAsync(b => b.Id == id);
         }
 
-        public void AddBook(Book book)
+        public async Task AddBook(Book book)
         {
-            using SqlConnection connection = new SqlConnection(_connectionString);
-            connection.Open();
-
-            string query =
-                @"INSERT INTO Books (Title, Author, IsAvailable)
-                OUTPUT INSERTED.Id
-                VALUES (@Title, @Author, 1)";
-
-            using SqlCommand command =new SqlCommand(query, connection);
-
-            command.Parameters.AddWithValue("@Title", book.Title);
-            command.Parameters.AddWithValue("@Author", book.Author);
-
-            book.Id = Convert.ToInt32(command.ExecuteScalar());
             book.IsAvailable = true;
+
+            await _context.Books.AddAsync(book);
+            await _context.SaveChangesAsync();
         }
 
-        public bool Update(int id, Book updatedBook)
+        public async Task<bool> Update(int id, Book updatedBook)
         {
-            using SqlConnection connection = new SqlConnection(_connectionString);
+            Book? book = await _context.Books.FindAsync(id);
 
-            connection.Open();
+            if (book is null)
+                return false;
 
-            string query =
-                @"UPDATE Books
-                  SET Title = @Title,
-                      Author = @Author
-                  WHERE Id = @Id";
+            book.Title = updatedBook.Title;
+            book.Author = updatedBook.Author;
 
-            using SqlCommand command = new SqlCommand(query, connection);
+            await _context.SaveChangesAsync();
 
-            command.Parameters.AddWithValue("@Title", updatedBook.Title);
-            command.Parameters.AddWithValue("@Author", updatedBook.Author);
-            command.Parameters.AddWithValue("@Id", id);
-
-            int affectedRows = command.ExecuteNonQuery();
-
-            return affectedRows > 0;
+            return true;
         }
 
-        public bool Delete(int id)
+        public async Task<bool> Delete(int id)
         {
-            using SqlConnection connection = new SqlConnection(_connectionString);
+            Book? book = await _context.Books.FindAsync(id);
 
-            connection.Open();
+            if (book is null)
+                return false;
 
-            string query =
-                "DELETE FROM Books WHERE Id = @Id";
+            _context.Books.Remove(book);
 
-            using SqlCommand command = new SqlCommand(query, connection);
+            await _context.SaveChangesAsync();
 
-            command.Parameters.AddWithValue("@Id", id);
-
-            int affectedRows = command.ExecuteNonQuery();
-
-            return affectedRows > 0;
+            return true;
         }
     }
 }

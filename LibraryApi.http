@@ -123,8 +123,8 @@ POST {{LibraryApi_HostAddress}}/api/loans
 Content-Type: application/json
 
 {
-  "bookId": 1,
-  "memberId": 1
+  "bookId": 3,
+  "memberId": 3
 }
 
 
@@ -196,7 +196,7 @@ Content-Type: application/json
 
 {
   "bookId": 1,
-  "memberId": 2
+  "memberId": 3
 }
 
 

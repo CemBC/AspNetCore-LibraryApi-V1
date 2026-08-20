@@ -1,19 +1,23 @@
+using LibraryApi.Data;
 using LibraryApi.Services;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-builder.Services.AddSingleton<BookService>();
-builder.Services.AddSingleton<MemberService>();
-builder.Services.AddSingleton<LoanService>();
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+
+builder.Services.AddDbContext<LibraryDbContext>(options =>
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("LibraryDb")));
+
+builder.Services.AddScoped<BookService>();
+builder.Services.AddScoped<MemberService>();
+builder.Services.AddScoped<LoanService>();
+
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

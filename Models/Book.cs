@@ -7,5 +7,6 @@
         public string Author { get; set; } = string.Empty;
         public bool IsAvailable { get; set; } = true;
 
+        public ICollection<Loan> Loans { get; set; } = new List<Loan>();
     }
 }

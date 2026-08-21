@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using LibraryApi.DTOs.Members;
+using LibraryApi.Models;
 using LibraryApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -17,7 +18,12 @@ public class MembersController : ControllerBase
 
     private readonly IMapper _mapper;
 
-    public MembersController(MemberService memberService , IValidator<CreateMemberRequest> createMemberValidator, IValidator<UpdateMemberRequest> updateMemberValidator , IMapper mapper)
+
+    public MembersController(
+        MemberService memberService,
+        IValidator<CreateMemberRequest> createMemberValidator,
+        IValidator<UpdateMemberRequest> updateMemberValidator,
+        IMapper mapper)
     {
         _memberService = memberService;
         _createMemberValidator = createMemberValidator;
@@ -25,31 +31,31 @@ public class MembersController : ControllerBase
         _mapper = mapper;
     }
 
+
     [HttpGet]
     public async Task<ActionResult<IEnumerable<MemberResponse>>> GetAll()
     {
-        var members = await _memberService.GetAllAsync();
+        List<Member> members =
+            await _memberService.GetAllAsync();
 
 
-        var response = _mapper.Map<List<MemberResponse>>(members);
+        List<MemberResponse> response =
+            _mapper.Map<List<MemberResponse>>(members);
 
 
         return Ok(response);
     }
 
 
-
     [HttpGet("{id:int}")]
     public async Task<ActionResult<MemberResponse>> GetById(int id)
     {
-        var member = await _memberService.GetByIdAsync(id);
+        Member member =
+            await _memberService.GetByIdAsync(id);
 
 
-        if (member == null)
-            return NotFound();
-
-
-        var response = _mapper.Map<MemberResponse>(member);
+        MemberResponse response =
+            _mapper.Map<MemberResponse>(member);
 
 
         return Ok(response);
@@ -60,13 +66,20 @@ public class MembersController : ControllerBase
     public async Task<ActionResult<MemberResponse>> Create(
         CreateMemberRequest request)
     {
-        var validationResult = await _createMemberValidator.ValidateAsync(request);
-        if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
-
-        var member = await _memberService.CreateAsync(request);
+        var validationResult =
+            await _createMemberValidator.ValidateAsync(request);
 
 
-        var response = _mapper.Map<MemberResponse>(member);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
+
+
+        Member member =
+            await _memberService.CreateAsync(request);
+
+
+        MemberResponse response =
+            _mapper.Map<MemberResponse>(member);
 
 
         return CreatedAtAction(
@@ -81,14 +94,15 @@ public class MembersController : ControllerBase
         int id,
         UpdateMemberRequest request)
     {
-        var validationResult = await _updateMemberValidator.ValidateAsync(request);
+        var validationResult =
+            await _updateMemberValidator.ValidateAsync(request);
+
+
         if (!validationResult.IsValid)
             return BadRequest(validationResult.Errors);
-        var updated = await _memberService.UpdateAsync(id, request);
 
 
-        if (!updated)
-            return NotFound();
+        await _memberService.UpdateAsync(id, request);
 
 
         return NoContent();
@@ -98,11 +112,7 @@ public class MembersController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        var deleted = await _memberService.DeleteAsync(id);
-
-
-        if (!deleted)
-            return NotFound();
+        await _memberService.DeleteAsync(id);
 
 
         return NoContent();

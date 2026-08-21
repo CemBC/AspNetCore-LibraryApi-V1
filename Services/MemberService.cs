@@ -1,5 +1,6 @@
 ﻿using LibraryApi.Data;
 using LibraryApi.DTOs.Members;
+using LibraryApi.Exceptions;
 using LibraryApi.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,17 +24,24 @@ public class MemberService
     }
 
 
-    public async Task<Member?> GetByIdAsync(int id)
+    public async Task<Member> GetByIdAsync(int id)
     {
-        return await _context.Members
+        Member? member = await _context.Members
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == id);
+
+
+        if (member is null)
+            throw new NotFoundException("Member not found.");
+
+
+        return member;
     }
 
 
     public async Task<Member> CreateAsync(CreateMemberRequest request)
     {
-        var member = new Member
+        Member member = new Member
         {
             FullName = request.FullName,
             Email = request.Email
@@ -44,20 +52,21 @@ public class MemberService
 
         await _context.SaveChangesAsync();
 
+
         return member;
     }
 
 
-    public async Task<bool> UpdateAsync(
+    public async Task UpdateAsync(
         int id,
         UpdateMemberRequest request)
     {
-        var member = await _context.Members
+        Member? member = await _context.Members
             .FirstOrDefaultAsync(m => m.Id == id);
 
 
-        if (member == null)
-            return false;
+        if (member is null)
+            throw new NotFoundException("Member not found.");
 
 
         member.FullName = request.FullName;
@@ -65,25 +74,21 @@ public class MemberService
 
 
         await _context.SaveChangesAsync();
-
-        return true;
     }
 
 
-    public async Task<bool> DeleteAsync(int id)
+    public async Task DeleteAsync(int id)
     {
-        var member = await _context.Members
+        Member? member = await _context.Members
             .FirstOrDefaultAsync(m => m.Id == id);
 
 
-        if (member == null)
-            return false;
+        if (member is null)
+            throw new NotFoundException("Member not found.");
 
 
         _context.Members.Remove(member);
 
         await _context.SaveChangesAsync();
-
-        return true;
     }
 }

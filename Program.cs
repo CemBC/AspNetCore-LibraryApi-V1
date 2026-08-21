@@ -2,6 +2,7 @@ using AutoMapper;
 using FluentValidation;
 using LibraryApi.Data;
 using LibraryApi.Mappings;
+using LibraryApi.Middleware;
 using LibraryApi.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -33,6 +34,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseMiddleware<ExceptionMiddleware>();
 
 app.UseAuthorization();
 

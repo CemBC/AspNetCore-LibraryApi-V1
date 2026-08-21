@@ -1,71 +1,91 @@
 ﻿using LibraryApi.Data;
 using LibraryApi.DTOs.Books;
+using LibraryApi.Exceptions;
 using LibraryApi.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace LibraryApi.Services
+namespace LibraryApi.Services;
+
+public class BookService
 {
-    public class BookService
+    private readonly LibraryDbContext _context;
+
+    public BookService(LibraryDbContext context)
     {
-        private readonly LibraryDbContext _context;
+        _context = context;
+    }
 
-        public BookService(LibraryDbContext context)
+
+    public async Task<List<Book>> GetAll()
+    {
+        return await _context.Books
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+
+    public async Task<Book> GetById(int id)
+    {
+        Book? book = await _context.Books
+            .AsNoTracking()
+            .FirstOrDefaultAsync(b => b.Id == id);
+
+
+        if (book is null)
+            throw new NotFoundException("Book not found.");
+
+
+        return book;
+    }
+
+
+    public async Task<Book> AddBook(CreateBookRequest request)
+    {
+        Book book = new Book
         {
-            _context = context;
-        }
+            Title = request.Title,
+            Author = request.Author
+        };
 
-        public async Task<List<Book>> GetAll()
-        {
-            return await _context.Books
-                .AsNoTracking()
-                .ToListAsync();
-        }
 
-        public async Task<Book?> GetById(int id)
-        {
-            return await _context.Books
-                .AsNoTracking()
-                .FirstOrDefaultAsync(b => b.Id == id);
-        }
+        await _context.Books.AddAsync(book);
 
-        public async Task<Book> AddBook(CreateBookRequest request)
-        {
-            var book = new Book
-            {
-                Title = request.Title,
-                Author = request.Author
-            };
+        await _context.SaveChangesAsync();
 
-            await _context.Books.AddAsync(book);
-            await _context.SaveChangesAsync();
 
-            return book;
-        }
+        return book;
+    }
 
-        public async Task<bool> Update(int id, UpdateBookRequest request)
-        {
-            var book = await _context.Books.FindAsync(id);
-            if (book == null) return false;
 
-            book.Title = request.Title;
-            book.Author = request.Author;
+    public async Task Update(int id, UpdateBookRequest request)
+    {
+        Book? book = await _context.Books.FindAsync(id);
 
-            await _context.SaveChangesAsync();
-            return true;
-        }
 
-        public async Task<bool> Delete(int id)
-        {
-            Book? book = await _context.Books.FindAsync(id);
+        if (book is null)
+            throw new NotFoundException("Book not found.");
 
-            if (book is null)
-                return false;
 
-            _context.Books.Remove(book);
+        book.Title = request.Title;
+        book.Author = request.Author;
 
-            await _context.SaveChangesAsync();
 
-            return true;
-        }
+        await _context.SaveChangesAsync();
+    }
+
+
+    public async Task Delete(int id)
+    {
+        Book? book = await _context.Books.FindAsync(id);
+
+
+        if (book is null)
+            throw new NotFoundException("Book not found.");
+
+
+        _context.Books.Remove(book);
+
+
+        await _context.SaveChangesAsync();
     }
 }

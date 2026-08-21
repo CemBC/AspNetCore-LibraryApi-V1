@@ -1,55 +1,111 @@
-﻿using LibraryApi.Models;
+﻿using LibraryApi.DTOs.Members;
 using LibraryApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
-namespace LibraryApi.Controllers
+namespace LibraryApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class MembersController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class MembersController : ControllerBase
+    private readonly MemberService _memberService;
+
+
+    public MembersController(MemberService memberService)
     {
-        private readonly MemberService _memberService;
-        public MembersController(MemberService memberService)
-        {
-            _memberService = memberService;
-        }
+        _memberService = memberService;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<MemberResponse>>> GetAll()
+    {
+        var members = await _memberService.GetAllAsync();
 
 
-        [HttpGet]
-        public async Task<ActionResult<List<Member>>> Get()
+        var response = members.Select(member => new MemberResponse
         {
-            return await _memberService.GetAll();
-        }
+            Id = member.Id,
+            FullName = member.FullName,
+            Email = member.Email
 
-        [HttpGet("{id:int}")]
-        public async Task<ActionResult<Member>>  GetById(int id)
-        {
-            var member = await _memberService.GetById(id);
-            if (member == null) return NotFound();
-            return member;
-        }
+        }).ToList();
 
-        [HttpPost]
-        public async Task<ActionResult<Member>> Create(Member member)
-        {
-            await _memberService.AddMember(member);
-            return CreatedAtAction(nameof(GetById), new { id = member.Id }, member);
-        }
 
-        [HttpPut("{id}")]
-        public async  Task<ActionResult<Member>> Update(int id, Member updatedMember)
-        {
-            bool isUpdated = await _memberService.Update(id, updatedMember);
-            if (!isUpdated) return NotFound();
-            return NoContent();
-        }
+        return Ok(response);
+    }
 
-        [HttpDelete("{id:int}")]
-        public async Task<ActionResult> Delete(int id)
+
+
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult<MemberResponse>> GetById(int id)
+    {
+        var member = await _memberService.GetByIdAsync(id);
+
+
+        if (member == null)
+            return NotFound();
+
+
+        var response = new MemberResponse
         {
-            bool isDeleted = await _memberService.Delete(id);
-            if(!isDeleted) return NotFound();
-            return NoContent();
-        }
+            Id = member.Id,
+            FullName = member.FullName,
+            Email = member.Email
+        };
+
+
+        return Ok(response);
+    }
+
+
+    [HttpPost]
+    public async Task<ActionResult<MemberResponse>> Create(
+        CreateMemberRequest request)
+    {
+        var member = await _memberService.CreateAsync(request);
+
+
+        var response = new MemberResponse
+        {
+            Id = member.Id,
+            FullName = member.FullName,
+            Email = member.Email
+        };
+
+
+        return CreatedAtAction(
+            nameof(GetById),
+            new { id = member.Id },
+            response);
+    }
+
+
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(
+        int id,
+        UpdateMemberRequest request)
+    {
+        var updated = await _memberService.UpdateAsync(id, request);
+
+
+        if (!updated)
+            return NotFound();
+
+
+        return NoContent();
+    }
+
+
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(int id)
+    {
+        var deleted = await _memberService.DeleteAsync(id);
+
+
+        if (!deleted)
+            return NotFound();
+
+
+        return NoContent();
     }
 }

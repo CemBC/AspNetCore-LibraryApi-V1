@@ -60,10 +60,7 @@ namespace LibraryApi.Controllers
         public async Task<ActionResult<LoanResponse>> CreateLoan(
             CreateLoanRequest request)
         {
-            var (status, createdLoan) =
-                await _loanService.CreateLoan(
-                    request.BookId,
-                    request.MemberId);
+            var (status, createdLoan) =  await _loanService.CreateLoan(request);
 
             if (status == LoanOperationStatus.BookNotFound)
                 return NotFound("Book not found.");

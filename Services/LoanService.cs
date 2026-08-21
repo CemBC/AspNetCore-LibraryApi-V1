@@ -1,4 +1,5 @@
 ﻿using LibraryApi.Data;
+using LibraryApi.DTOs.Loans;
 using LibraryApi.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,18 +29,17 @@ namespace LibraryApi.Services
         }
 
         public async Task<(LoanOperationStatus Status, Loan? CreatedLoan)> CreateLoan(
-            int bookId,
-            int memberId)
+            CreateLoanRequest request)
         {
             Book? book = await _context.Books
-                .FirstOrDefaultAsync(b => b.Id == bookId);
+                .FirstOrDefaultAsync(b => b.Id == request.BookId);
 
             if (book is null)
                 return (LoanOperationStatus.BookNotFound, null);
 
 
             bool memberExists = await _context.Members
-                .AnyAsync(m => m.Id == memberId);
+                .AnyAsync(m => m.Id == request.MemberId);
 
             if (!memberExists)
                 return (LoanOperationStatus.MemberNotFound, null);
@@ -51,8 +51,8 @@ namespace LibraryApi.Services
 
             Loan loan = new Loan
             {
-                BookId = bookId,
-                MemberId = memberId,
+                BookId = request.BookId,
+                MemberId = request.MemberId,
                 LoanDate = DateTime.Now,
                 ReturnDate = null
             };

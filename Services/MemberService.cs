@@ -1,59 +1,89 @@
 ﻿using LibraryApi.Data;
+using LibraryApi.DTOs.Members;
 using LibraryApi.Models;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
-namespace LibraryApi.Services
+namespace LibraryApi.Services;
+
+public class MemberService
 {
-    public class MemberService
+    private readonly LibraryDbContext _context;
+
+    public MemberService(LibraryDbContext context)
     {
-        private readonly LibraryDbContext _context;
+        _context = context;
+    }
 
-        public MemberService(LibraryDbContext context)
+
+    public async Task<List<Member>> GetAllAsync()
+    {
+        return await _context.Members
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+
+    public async Task<Member?> GetByIdAsync(int id)
+    {
+        return await _context.Members
+            .AsNoTracking()
+            .FirstOrDefaultAsync(m => m.Id == id);
+    }
+
+
+    public async Task<Member> CreateAsync(CreateMemberRequest request)
+    {
+        var member = new Member
         {
-            _context = context;
-        }
+            FullName = request.FullName,
+            Email = request.Email
+        };
 
-        public async Task<List<Member>> GetAll()
-        {
-            return await _context.Members.AsNoTracking().ToListAsync();
-        }
 
-        public async Task<Member?> GetById(int id)
-        {
-            return await _context.Members.AsNoTracking().
-                FirstOrDefaultAsync(m => m.Id == id);
-        }
+        _context.Members.Add(member);
 
-        public async Task AddMember(Member member)
-        {
-             await _context.Members.AddAsync(member);
-            await _context.SaveChangesAsync();
-        }
+        await _context.SaveChangesAsync();
 
-        public async Task<bool> Update(int id, Member updatedMember)
-        {
-            Member? member = await _context.Members.FindAsync(id);
-            if (member == null) return false;
+        return member;
+    }
 
-            member.FullName = updatedMember.FullName;
-            member.Email = updatedMember.Email;
 
-            await _context.SaveChangesAsync();
+    public async Task<bool> UpdateAsync(
+        int id,
+        UpdateMemberRequest request)
+    {
+        var member = await _context.Members
+            .FirstOrDefaultAsync(m => m.Id == id);
 
-            return true;
-        }
 
-        public async Task<bool> Delete(int id)
-        {
-            Member? member = await _context.Members.FindAsync(id);
-            if (member == null) return false;
+        if (member == null)
+            return false;
 
-            _context.Members.Remove(member);
 
-            await _context.SaveChangesAsync();
+        member.FullName = request.FullName;
+        member.Email = request.Email;
 
-            return true;
-        }
+
+        await _context.SaveChangesAsync();
+
+        return true;
+    }
+
+
+    public async Task<bool> DeleteAsync(int id)
+    {
+        var member = await _context.Members
+            .FirstOrDefaultAsync(m => m.Id == id);
+
+
+        if (member == null)
+            return false;
+
+
+        _context.Members.Remove(member);
+
+        await _context.SaveChangesAsync();
+
+        return true;
     }
 }

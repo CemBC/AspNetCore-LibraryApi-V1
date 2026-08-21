@@ -1,6 +1,7 @@
 ﻿using LibraryApi.Services;
 using Microsoft.AspNetCore.Mvc; 
 using LibraryApi.Models;
+using LibraryApi.DTOs.Books;
 
 namespace LibraryApi.Controllers
 {
@@ -16,32 +17,64 @@ namespace LibraryApi.Controllers
         }
 
         [HttpGet]
-        public async Task<ActionResult<List<Book>>> GetAll()
+        public async Task<ActionResult<List<BookResponse>>> GetAll()
         {
-            return await _bookService.GetAll();
+            var books = await _bookService.GetAll();
+            var response = books.Select(book => new BookResponse
+            {
+                Id = book.Id,
+                Title = book.Title,
+                Author = book.Author,
+                IsAvailable = book.IsAvailable
+            }).ToList();
+
+            return response;
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult<Book>> GetById(int id)
+        [HttpGet("{id:int}")]
+        public async Task<ActionResult<BookResponse>> GetById(int id)
         {
             var book = await _bookService.GetById(id);
-            if (book == null) return NotFound();
-            return book;
+
+            if (book == null)
+                return NotFound();
+
+            var response = new BookResponse
+            {
+                Id = book.Id,
+                Title = book.Title,
+                Author = book.Author,
+                IsAvailable = book.IsAvailable
+            };
+
+            return response;
         }
 
         [HttpPost]
-        public async Task<ActionResult<Book>> Create(Book book)
+        public async Task<ActionResult<BookResponse>> Create(CreateBookRequest request)
         {
-            await _bookService.AddBook(book);
-            return CreatedAtAction(nameof(GetById), new { id = book.Id }, book);
+            var book = await _bookService.AddBook(request);
+
+            var response = new BookResponse
+            {
+                Id = book.Id,
+                Title = book.Title,
+                Author = book.Author,
+                IsAvailable = book.IsAvailable
+            };
+
+            return CreatedAtAction(nameof(GetById), new { id = book.Id }, response);
         }
 
 
         [HttpPut("{id:int}")]
-        public async Task<ActionResult> Update(int id, Book updatedBook)
+        public async Task<IActionResult> Update(int id, UpdateBookRequest request)
         {
-            bool isUpdated = await _bookService.Update(id, updatedBook);
-            if (!isUpdated) return NotFound();
+            var updated = await _bookService.Update(id, request);
+
+            if (!updated)
+                return NotFound();
+
             return NoContent();
         }
 

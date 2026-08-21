@@ -1,4 +1,5 @@
 ﻿using LibraryApi.Data;
+using LibraryApi.DTOs.Books;
 using LibraryApi.Models;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,26 +28,29 @@ namespace LibraryApi.Services
                 .FirstOrDefaultAsync(b => b.Id == id);
         }
 
-        public async Task AddBook(Book book)
+        public async Task<Book> AddBook(CreateBookRequest request)
         {
-            book.IsAvailable = true;
+            var book = new Book
+            {
+                Title = request.Title,
+                Author = request.Author
+            };
 
             await _context.Books.AddAsync(book);
             await _context.SaveChangesAsync();
+
+            return book;
         }
 
-        public async Task<bool> Update(int id, Book updatedBook)
+        public async Task<bool> Update(int id, UpdateBookRequest request)
         {
-            Book? book = await _context.Books.FindAsync(id);
+            var book = await _context.Books.FindAsync(id);
+            if (book == null) return false;
 
-            if (book is null)
-                return false;
-
-            book.Title = updatedBook.Title;
-            book.Author = updatedBook.Author;
+            book.Title = request.Title;
+            book.Author = request.Author;
 
             await _context.SaveChangesAsync();
-
             return true;
         }
 

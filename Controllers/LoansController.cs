@@ -1,8 +1,9 @@
-﻿using LibraryApi.DTOs.Loans;
+﻿using AutoMapper;
+using FluentValidation;
+using LibraryApi.DTOs.Loans;
 using LibraryApi.Models;
 using LibraryApi.Services;
 using Microsoft.AspNetCore.Mvc;
-
 
 namespace LibraryApi.Controllers
 {
@@ -11,10 +12,13 @@ namespace LibraryApi.Controllers
     public class LoansController : ControllerBase
     {
         private readonly LoanService _loanService;
-
-        public LoansController(LoanService loanService)
+        private readonly IValidator<CreateLoanRequest> _loanValidator;
+        private readonly IMapper _mapper;
+        public LoansController(LoanService loanService , IValidator<CreateLoanRequest> loanValidator, IMapper mapper)
         {
             _loanService = loanService;
+            _loanValidator = loanValidator;
+            _mapper = mapper;
         }
 
         [HttpGet]
@@ -22,16 +26,7 @@ namespace LibraryApi.Controllers
         {
             List<Loan> loans = await _loanService.GetAll();
 
-            List<LoanResponse> response = loans
-                .Select(l => new LoanResponse
-                {
-                    Id = l.Id,
-                    BookId = l.BookId,
-                    MemberId = l.MemberId,
-                    LoanDate = l.LoanDate,
-                    ReturnDate = l.ReturnDate
-                })
-                .ToList();
+            List<LoanResponse> response = _mapper.Map<List<LoanResponse>>(loans);
 
             return response;
         }
@@ -44,14 +39,7 @@ namespace LibraryApi.Controllers
             if (loan is null)
                 return NotFound();
 
-            LoanResponse response = new LoanResponse
-            {
-                Id = loan.Id,
-                BookId = loan.BookId,
-                MemberId = loan.MemberId,
-                LoanDate = loan.LoanDate,
-                ReturnDate = loan.ReturnDate
-            };
+            LoanResponse response = _mapper.Map<LoanResponse>(loan);
 
             return response;
         }
@@ -60,6 +48,10 @@ namespace LibraryApi.Controllers
         public async Task<ActionResult<LoanResponse>> CreateLoan(
             CreateLoanRequest request)
         {
+            var validationResult = await _loanValidator.ValidateAsync(request);
+            if (!validationResult.IsValid)
+                return BadRequest(validationResult.Errors);
+
             var (status, createdLoan) =  await _loanService.CreateLoan(request);
 
             if (status == LoanOperationStatus.BookNotFound)
@@ -74,14 +66,7 @@ namespace LibraryApi.Controllers
             if (createdLoan is null)
                 return StatusCode(500);
 
-            LoanResponse response = new LoanResponse
-            {
-                Id = createdLoan.Id,
-                BookId = createdLoan.BookId,
-                MemberId = createdLoan.MemberId,
-                LoanDate = createdLoan.LoanDate,
-                ReturnDate = createdLoan.ReturnDate
-            };
+            LoanResponse response = _mapper.Map<LoanResponse>(createdLoan);
 
             return CreatedAtAction(
                 nameof(GetById),

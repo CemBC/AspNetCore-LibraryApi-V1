@@ -1,10 +1,17 @@
+using AutoMapper;
+using FluentValidation;
 using LibraryApi.Data;
+using LibraryApi.Mappings;
 using LibraryApi.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
+
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+
+builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
 
 builder.Services.AddDbContext<LibraryDbContext>(options =>
     options.UseSqlServer(

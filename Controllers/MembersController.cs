@@ -1,4 +1,6 @@
-﻿using LibraryApi.DTOs.Members;
+﻿using AutoMapper;
+using FluentValidation;
+using LibraryApi.DTOs.Members;
 using LibraryApi.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,10 +12,17 @@ public class MembersController : ControllerBase
 {
     private readonly MemberService _memberService;
 
+    private readonly IValidator<CreateMemberRequest> _createMemberValidator;
+    private readonly IValidator<UpdateMemberRequest> _updateMemberValidator;
 
-    public MembersController(MemberService memberService)
+    private readonly IMapper _mapper;
+
+    public MembersController(MemberService memberService , IValidator<CreateMemberRequest> createMemberValidator, IValidator<UpdateMemberRequest> updateMemberValidator , IMapper mapper)
     {
         _memberService = memberService;
+        _createMemberValidator = createMemberValidator;
+        _updateMemberValidator = updateMemberValidator;
+        _mapper = mapper;
     }
 
     [HttpGet]
@@ -22,13 +31,7 @@ public class MembersController : ControllerBase
         var members = await _memberService.GetAllAsync();
 
 
-        var response = members.Select(member => new MemberResponse
-        {
-            Id = member.Id,
-            FullName = member.FullName,
-            Email = member.Email
-
-        }).ToList();
+        var response = _mapper.Map<List<MemberResponse>>(members);
 
 
         return Ok(response);
@@ -46,12 +49,7 @@ public class MembersController : ControllerBase
             return NotFound();
 
 
-        var response = new MemberResponse
-        {
-            Id = member.Id,
-            FullName = member.FullName,
-            Email = member.Email
-        };
+        var response = _mapper.Map<MemberResponse>(member);
 
 
         return Ok(response);
@@ -62,15 +60,13 @@ public class MembersController : ControllerBase
     public async Task<ActionResult<MemberResponse>> Create(
         CreateMemberRequest request)
     {
+        var validationResult = await _createMemberValidator.ValidateAsync(request);
+        if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
+
         var member = await _memberService.CreateAsync(request);
 
 
-        var response = new MemberResponse
-        {
-            Id = member.Id,
-            FullName = member.FullName,
-            Email = member.Email
-        };
+        var response = _mapper.Map<MemberResponse>(member);
 
 
         return CreatedAtAction(
@@ -85,6 +81,9 @@ public class MembersController : ControllerBase
         int id,
         UpdateMemberRequest request)
     {
+        var validationResult = await _updateMemberValidator.ValidateAsync(request);
+        if (!validationResult.IsValid)
+            return BadRequest(validationResult.Errors);
         var updated = await _memberService.UpdateAsync(id, request);
 
 

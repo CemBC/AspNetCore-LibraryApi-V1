@@ -2,7 +2,8 @@
 using Microsoft.AspNetCore.Mvc; 
 using LibraryApi.Models;
 using LibraryApi.DTOs.Books;
-
+using FluentValidation;
+using AutoMapper;
 namespace LibraryApi.Controllers
 {
 
@@ -10,23 +11,24 @@ namespace LibraryApi.Controllers
     [Route("api/[controller]")]
     public class BooksController : ControllerBase
     {
+        private readonly IValidator<CreateBookRequest> _createValidator;
+        private readonly IValidator<UpdateBookRequest> _updateValidator;
+        private readonly IMapper _mapper;
         private readonly BookService _bookService;
-        public BooksController(BookService bookService)
+
+        public BooksController(BookService bookService, IValidator<CreateBookRequest> createValidator , IValidator<UpdateBookRequest> updateValidator , IMapper mapper)
         {
             _bookService = bookService;
+            _createValidator = createValidator;
+            _updateValidator = updateValidator;
+            _mapper = mapper;
         }
 
         [HttpGet]
         public async Task<ActionResult<List<BookResponse>>> GetAll()
         {
             var books = await _bookService.GetAll();
-            var response = books.Select(book => new BookResponse
-            {
-                Id = book.Id,
-                Title = book.Title,
-                Author = book.Author,
-                IsAvailable = book.IsAvailable
-            }).ToList();
+            var response = _mapper.Map<List<BookResponse>>(books);
 
             return response;
         }
@@ -39,13 +41,7 @@ namespace LibraryApi.Controllers
             if (book == null)
                 return NotFound();
 
-            var response = new BookResponse
-            {
-                Id = book.Id,
-                Title = book.Title,
-                Author = book.Author,
-                IsAvailable = book.IsAvailable
-            };
+            var response = _mapper.Map<BookResponse>(book);
 
             return response;
         }
@@ -53,15 +49,13 @@ namespace LibraryApi.Controllers
         [HttpPost]
         public async Task<ActionResult<BookResponse>> Create(CreateBookRequest request)
         {
+
+            var validationResult = await _createValidator.ValidateAsync(request);
+            if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
+
             var book = await _bookService.AddBook(request);
 
-            var response = new BookResponse
-            {
-                Id = book.Id,
-                Title = book.Title,
-                Author = book.Author,
-                IsAvailable = book.IsAvailable
-            };
+            var response = _mapper.Map<BookResponse>(book);
 
             return CreatedAtAction(nameof(GetById), new { id = book.Id }, response);
         }
@@ -70,6 +64,9 @@ namespace LibraryApi.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, UpdateBookRequest request)
         {
+            var validationResult = await _updateValidator.ValidateAsync(request);
+            if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
+
             var updated = await _bookService.Update(id, request);
 
             if (!updated)

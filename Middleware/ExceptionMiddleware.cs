@@ -43,7 +43,7 @@ public class ExceptionMiddleware
 
             await context.Response.WriteAsJsonAsync(new
             {
-                message = "An unexpected error occurred."
+                message = ex.Message
             });
         }
     }

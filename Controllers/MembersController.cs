@@ -3,10 +3,12 @@ using FluentValidation;
 using LibraryApi.DTOs.Members;
 using LibraryApi.Models;
 using LibraryApi.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryApi.Controllers;
 
+[Authorize(Roles = "Admin")]
 [ApiController]
 [Route("api/[controller]")]
 public class MembersController : ControllerBase

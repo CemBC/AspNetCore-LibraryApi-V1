@@ -6,7 +6,6 @@ public class ExceptionMiddleware
 {
     private readonly RequestDelegate _next;
 
-
     public ExceptionMiddleware(RequestDelegate next)
     {
         _next = next;
@@ -31,6 +30,15 @@ public class ExceptionMiddleware
         catch (BadRequestException ex)
         {
             context.Response.StatusCode = 400;
+
+            await context.Response.WriteAsJsonAsync(new
+            {
+                message = ex.Message
+            });
+        }
+        catch (UnauthorizedException ex)
+        {
+            context.Response.StatusCode = 401;
 
             await context.Response.WriteAsJsonAsync(new
             {

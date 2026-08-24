@@ -4,6 +4,7 @@ using LibraryApi.DTOs.Books;
 using LibraryApi.Models;
 using LibraryApi.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LibraryApi.Controllers;
 
@@ -57,6 +58,8 @@ public class BooksController : ControllerBase
     }
 
 
+
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<ActionResult<BookResponse>> Create(
         CreateBookRequest request)
@@ -83,6 +86,7 @@ public class BooksController : ControllerBase
     }
 
 
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:int}")]
     public async Task<IActionResult> Update(
         int id,
@@ -103,6 +107,8 @@ public class BooksController : ControllerBase
     }
 
 
+
+    [Authorize(Roles = "Admin")]
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {

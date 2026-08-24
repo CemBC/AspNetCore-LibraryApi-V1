@@ -24,7 +24,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(50);
 
-        builder.Property(u => u.RefreshToken)
+        builder.Property(u => u.RefreshTokenHash)
             .IsRequired(false);
 
         builder.Property(u => u.RefreshTokenExpiryTime)

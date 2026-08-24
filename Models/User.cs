@@ -8,7 +8,7 @@
         public string PasswordHash { get; set; } = string.Empty;
         public string Role { get; set; } = "Member";
 
-        public string? RefreshToken { get; set; }
+        public string? RefreshTokenHash { get; set; }
 
         public DateTime? RefreshTokenExpiryTime { get; set; }
     }

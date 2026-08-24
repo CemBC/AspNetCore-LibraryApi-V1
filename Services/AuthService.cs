@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Mvc;
+using LibraryApi.Helpers;
 
 namespace LibraryApi.Services
 {
@@ -53,7 +54,7 @@ namespace LibraryApi.Services
             User? user = await _context.Users.FirstOrDefaultAsync(u=> u.Id == UserId);
             if(user is null) throw new UnauthorizedException("User not found");
 
-            user.RefreshToken = null;
+            user.RefreshTokenHash = null;
             user.RefreshTokenExpiryTime = null;
 
             await _context.SaveChangesAsync();
@@ -78,7 +79,7 @@ namespace LibraryApi.Services
 
             string refreshToken = CreateRefreshToken();
 
-            user.RefreshToken = refreshToken;
+            user.RefreshTokenHash = TokenHasher.Hash(refreshToken);
 
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(_configuration.GetValue<int>("Jwt:RefreshTokenDays"));
 
@@ -108,7 +109,10 @@ namespace LibraryApi.Services
 
         public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
         {
-            User? user = await _context.Users.FirstOrDefaultAsync(u => u.RefreshToken == request.RefreshToken);
+
+            string hashedToken = TokenHasher.Hash(request.RefreshToken);
+
+            User? user = await _context.Users.FirstOrDefaultAsync(u => u.RefreshTokenHash == hashedToken);
 
             if(user is null) throw new UnauthorizedException("Invalid refresh token");
 
@@ -117,7 +121,7 @@ namespace LibraryApi.Services
             string accessToken = CreateAccesToken(user);
             string newRefreshToken = CreateRefreshToken();
 
-            user.RefreshToken = newRefreshToken;
+            user.RefreshTokenHash = TokenHasher.Hash(newRefreshToken);
             
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(_configuration.GetValue<int>("Jwt:RefreshTokenDays"));
 

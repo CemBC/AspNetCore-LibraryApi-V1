@@ -22,5 +22,14 @@ public sealed class RegisterRequestValidator
             .WithMessage("Password cannot be empty.")
             .MinimumLength(6)
             .WithMessage("Password must be at least 6 characters long.");
+
+        RuleFor(x => x.FullName)
+            .NotEmpty()
+            .WithMessage("Full name is required.")
+            .MaximumLength(150)
+            .WithMessage("Full name cannot exceed 150 characters.")
+            .Matches(@"^[a-zA-ZğüşöçıİĞÜŞÖÇ\s]+$")
+            .WithMessage("Full name can only contain letters.");
+
     }
 }

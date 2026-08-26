@@ -1,4 +1,6 @@
-﻿namespace LibraryApi.DTOs.Books;
+﻿using LibraryApi.Models.Status;
+
+namespace LibraryApi.DTOs.Books;
 
 public class BookResponse
 {
@@ -8,5 +10,5 @@ public class BookResponse
 
     public string Author { get; set; } = string.Empty;
 
-    public bool IsAvailable { get; set; }
+    public BookStatus Status { get; set; }
 }

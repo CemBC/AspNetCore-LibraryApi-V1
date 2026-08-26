@@ -1,10 +1,11 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using LibraryApi.DTOs.Books;
+using LibraryApi.DTOs.Common;
 using LibraryApi.Models;
 using LibraryApi.Services;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryApi.Controllers;
 
@@ -15,6 +16,8 @@ public class BooksController : ControllerBase
     private readonly BookService _bookService;
     private readonly IValidator<CreateBookRequest> _createValidator;
     private readonly IValidator<UpdateBookRequest> _updateValidator;
+
+    private readonly IValidator<BookQuery> _bookQueryValidator;
     private readonly IMapper _mapper;
 
 
@@ -22,42 +25,41 @@ public class BooksController : ControllerBase
         BookService bookService,
         IValidator<CreateBookRequest> createValidator,
         IValidator<UpdateBookRequest> updateValidator,
-        IMapper mapper)
+        IMapper mapper,
+        IValidator<BookQuery> bookQueryValidator)
     {
         _bookService = bookService;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _mapper = mapper;
+        _bookQueryValidator = bookQueryValidator;
     }
+
+
+
 
 
     [HttpGet]
-    public async Task<ActionResult<List<BookResponse>>> GetAll()
+    public async Task<ActionResult<PagedResponse<BookResponse>>> GetAll([FromQuery] BookQuery query)
     {
-        List<Book> books = await _bookService.GetAll();
+        var validationResult = await _bookQueryValidator.ValidateAsync(query);
 
-        List<BookResponse> response =
-            _mapper.Map<List<BookResponse>>(books);
+        if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
 
+        var response = await _bookService.GetAllAsync(query);
 
         return Ok(response);
     }
-
 
     [HttpGet("{id:int}")]
     public async Task<ActionResult<BookResponse>> GetById(int id)
     {
         Book book = await _bookService.GetById(id);
 
-
-        BookResponse response =
-            _mapper.Map<BookResponse>(book);
-
+        BookResponse response = _mapper.Map<BookResponse>(book);
 
         return Ok(response);
     }
-
-
 
     [Authorize(Roles = "Admin")]
     [HttpPost]

@@ -1,6 +1,7 @@
 ﻿using LibraryApi.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using System.Reflection.Emit;
 
 namespace LibraryApi.Data.Configurations;
 
@@ -29,5 +30,10 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(u => u.RefreshTokenExpiryTime)
             .IsRequired(false);
+
+        builder.HasOne(u => u.Member)
+            .WithOne(m => m.User)
+            .HasForeignKey<Member>(m => m.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }

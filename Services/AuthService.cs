@@ -11,6 +11,7 @@ using System.Text;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.AspNetCore.Mvc;
 using LibraryApi.Helpers;
+using LibraryApi.Services.Interfaces;
 
 namespace LibraryApi.Services
 {
@@ -43,8 +44,19 @@ namespace LibraryApi.Services
             };
             
             user.PasswordHash = _passwordHasher.HashPassword(user, request.Password);
-            
+
+            Member member = new Member
+            {
+                User = user,
+                FullName = request.FullName,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            user.Member = member;
+
+
             await _context.Users.AddAsync(user);
+            
 
             await _context.SaveChangesAsync();
         }
@@ -95,7 +107,7 @@ namespace LibraryApi.Services
 
         public async Task<CurrentUserResponse> GetCurrentUserAsync(int userId)
         {
-            User? user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            User? user = await _context.Users.Include(u => u.Member).FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user is null) throw new NotFoundException("User not found");
 
@@ -103,7 +115,9 @@ namespace LibraryApi.Services
             {
                 Id = user.Id,
                 Email = user.Email,
-                Role = user.Role
+                Role = user.Role,
+                MemberId= user.Member?.Id,
+                FullName = user.Member?.FullName
             };
         }
 

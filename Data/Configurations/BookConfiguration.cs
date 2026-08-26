@@ -1,4 +1,5 @@
 ﻿using LibraryApi.Models;
+using LibraryApi.Models.Status;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -18,9 +19,13 @@ namespace LibraryApi.Data.Configurations
                 .IsRequired()
                 .HasMaxLength(150);
 
-            builder.Property(b => b.IsAvailable)
-                .IsRequired()
-                .HasDefaultValue(true);
+            builder.Property(b => b.Status)
+                .HasConversion<int>()
+                .IsRequired();
+
+            builder.HasMany(b => b.LoanRequests)
+                .WithOne(l => l.Book)
+                .HasForeignKey(l => l.BookId);
 
 
             builder.HasData(
@@ -29,14 +34,14 @@ namespace LibraryApi.Data.Configurations
                     Id = 1,
                     Title = "Suç ve Ceza",
                     Author = "Fyodor Dostoyevski",
-                    IsAvailable = true
+                    Status = BookStatus.Available
                 },
                 new Book
                 {
                     Id = 2,
                     Title = "1984",
                     Author = "George Orwell",
-                    IsAvailable = true
+                    Status = BookStatus.Available
                 }
             );
         }

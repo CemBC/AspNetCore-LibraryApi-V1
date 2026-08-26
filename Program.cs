@@ -5,6 +5,7 @@ using LibraryApi.Mappings;
 using LibraryApi.Middleware;
 using LibraryApi.Models;
 using LibraryApi.Services;
+using LibraryApi.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -57,6 +58,8 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("LibraryDb")));
 
+builder.Services.AddScoped<ILoanExtensionService,LoanExtensionService>();
+builder.Services.AddScoped<ILoanRequestService,LoanRequestService>();
 builder.Services.AddScoped<BookService>();
 builder.Services.AddScoped<MemberService>();
 builder.Services.AddScoped<LoanService>();

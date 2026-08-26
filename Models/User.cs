@@ -11,5 +11,7 @@
         public string? RefreshTokenHash { get; set; }
 
         public DateTime? RefreshTokenExpiryTime { get; set; }
+
+        public Member? Member { get; set; }
     }
 }

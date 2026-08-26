@@ -1,15 +1,17 @@
 ﻿using AutoMapper;
 using FluentValidation;
+using LibraryApi.DTOs.Common;
 using LibraryApi.DTOs.Loans;
 using LibraryApi.Models;
 using LibraryApi.Services;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 
 namespace LibraryApi.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class LoansController : ControllerBase
@@ -17,26 +19,31 @@ public class LoansController : ControllerBase
     private readonly LoanService _loanService;
     private readonly IValidator<CreateLoanRequest> _loanValidator;
     private readonly IMapper _mapper;
+    private readonly IValidator<LoanQuery> _loanQueryValidator;
 
 
     public LoansController(
         LoanService loanService,
         IValidator<CreateLoanRequest> loanValidator,
-        IMapper mapper)
+        IMapper mapper,
+        IValidator<LoanQuery> loanQueryValidator)
     {
         _loanService = loanService;
         _loanValidator = loanValidator;
         _mapper = mapper;
+        _loanQueryValidator = loanQueryValidator;
     }
 
 
+    [Authorize(Roles = "Admin")]
     [HttpGet]
-    public async Task<ActionResult<List<LoanResponse>>> GetAll()
+    public async Task<ActionResult<PagedResponse<LoanResponse>>> GetAll([FromQuery] LoanQuery query)
     {
-        List<Loan> loans = await _loanService.GetAll();
+        var validationResult = await _loanQueryValidator.ValidateAsync(query);
+        if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
 
-        List<LoanResponse> response =
-            _mapper.Map<List<LoanResponse>>(loans);
+
+        var response = await _loanService.GetAllAsync(query);
 
         return Ok(response);
     }
@@ -88,4 +95,60 @@ public class LoansController : ControllerBase
 
         return NoContent();
     }
+
+    [Authorize(Roles = "Admin")]
+    [HttpPost("update-overdue")]
+    public async Task<IActionResult> UpdateOverdue()
+    {
+        await _loanService.UpdateOverdueLoansAsync();
+
+        return Ok();
+    }
+
+
+
+    [Authorize(Roles = "Member")]
+    [HttpGet("my")]
+    public async Task<ActionResult<List<LoanResponse>>> GetMyLoans()
+    {
+        string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+
+        if (userId is null) return Unauthorized();
+       
+
+        List<LoanResponse> response = await _loanService.GetMyLoansAsync(int.Parse(userId));
+
+
+        return Ok(response);
+    }
+
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("active")]
+    public async Task<ActionResult<PagedResponse<LoanResponse>>> GetActiveLoans([FromQuery] LoanQuery query)
+    {
+        var validationResult = await _loanQueryValidator.ValidateAsync(query);
+
+        if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
+
+        var response = await _loanService.GetActiveLoansAsync(query);
+
+        return Ok(response);
+    }
+
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("overdue")]
+    public async Task<ActionResult<PagedResponse<LoanResponse>>> GetOverdueLoans([FromQuery] LoanQuery query)
+    {
+        var validationResult = await _loanQueryValidator.ValidateAsync(query);
+
+        if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
+
+        var response = await _loanService.GetOverdueLoansAsync(query);
+
+        return Ok(response);
+    }
+
 }

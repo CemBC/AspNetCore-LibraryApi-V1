@@ -1,14 +1,17 @@
 ﻿using AutoMapper;
 using FluentValidation;
+using LibraryApi.DTOs.Common;
+using LibraryApi.DTOs.Loans;
 using LibraryApi.DTOs.Members;
 using LibraryApi.Models;
 using LibraryApi.Services;
+using LibraryApi.Validators.Members;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace LibraryApi.Controllers;
 
-[Authorize(Roles = "Admin")]
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class MembersController : ControllerBase
@@ -18,6 +21,8 @@ public class MembersController : ControllerBase
     private readonly IValidator<CreateMemberRequest> _createMemberValidator;
     private readonly IValidator<UpdateMemberRequest> _updateMemberValidator;
 
+    private readonly IValidator<MemberQuery> _memberQueryValidator;
+
     private readonly IMapper _mapper;
 
 
@@ -25,25 +30,26 @@ public class MembersController : ControllerBase
         MemberService memberService,
         IValidator<CreateMemberRequest> createMemberValidator,
         IValidator<UpdateMemberRequest> updateMemberValidator,
-        IMapper mapper)
+        IMapper mapper,
+        IValidator<MemberQuery> memberQueryValidator)
     {
         _memberService = memberService;
         _createMemberValidator = createMemberValidator;
         _updateMemberValidator = updateMemberValidator;
         _mapper = mapper;
+        _memberQueryValidator = memberQueryValidator;
     }
 
 
+    [Authorize(Roles = "Admin")]
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<MemberResponse>>> GetAll()
+    public async Task<ActionResult<PagedResponse<MemberResponse>>> GetAll([FromQuery] MemberQuery query)
     {
-        List<Member> members =
-            await _memberService.GetAllAsync();
+        var validationResult = await _memberQueryValidator.ValidateAsync(query);
 
+        if(!validationResult.IsValid) return BadRequest(validationResult.Errors);
 
-        List<MemberResponse> response =
-            _mapper.Map<List<MemberResponse>>(members);
-
+        var response = await _memberService.GetAllAsync(query);
 
         return Ok(response);
     }
@@ -118,5 +124,16 @@ public class MembersController : ControllerBase
 
 
         return NoContent();
+    }
+
+
+    [Authorize(Roles = "Admin")]
+    [HttpGet("{id:int}/loans")]
+    public async Task<ActionResult<List<LoanResponse>>> GetMemberLoans(int id)
+    {
+        var response =
+            await _memberService.GetMemberLoansAsync(id);
+
+        return Ok(response);
     }
 }

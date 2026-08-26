@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LibraryApi.Migrations
 {
     [DbContext(typeof(LibraryDbContext))]
-    [Migration("20260823200015_AddUserAuth")]
-    partial class AddUserAuth
+    [Migration("20260824200215_AddLoanStatusAndDueDate")]
+    partial class AddLoanStatusAndDueDate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,10 +38,8 @@ namespace LibraryApi.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
-                    b.Property<bool>("IsAvailable")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -57,19 +55,19 @@ namespace LibraryApi.Migrations
                         {
                             Id = 1,
                             Author = "Fyodor Dostoyevski",
-                            IsAvailable = true,
+                            Status = 1,
                             Title = "Suç ve Ceza"
                         },
                         new
                         {
                             Id = 2,
                             Author = "George Orwell",
-                            IsAvailable = true,
+                            Status = 1,
                             Title = "1984"
                         });
                 });
 
-            modelBuilder.Entity("LibraryApi.Models.Loan", b =>
+            modelBuilder.Entity("LibraryApi.Models.LoanRequest", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -80,14 +78,19 @@ namespace LibraryApi.Migrations
                     b.Property<int>("BookId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("LoanDate")
-                        .HasColumnType("datetime2");
+                    b.Property<string>("LoanCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("MemberId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime?>("ReturnDate")
+                    b.Property<DateTime>("RequestDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -95,44 +98,7 @@ namespace LibraryApi.Migrations
 
                     b.HasIndex("MemberId");
 
-                    b.ToTable("Loans");
-                });
-
-            modelBuilder.Entity("LibraryApi.Models.Member", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Email")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Members");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Email = "john.doe@example.com",
-                            FullName = "John Doe"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Email = "jane.smith@example.com",
-                            FullName = "Jane Smith"
-                        });
+                    b.ToTable("LoanRequest");
                 });
 
             modelBuilder.Entity("LibraryApi.Models.User", b =>
@@ -152,11 +118,11 @@ namespace LibraryApi.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("RefreshToken")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime?>("RefreshTokenExpiryTime")
                         .HasColumnType("datetime2");
+
+                    b.Property<string>("RefreshTokenHash")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Role")
                         .IsRequired()
@@ -171,7 +137,88 @@ namespace LibraryApi.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("LibraryApi.Models.Loan", b =>
+            modelBuilder.Entity("Loan", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("BookId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("LoanDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReturnDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BookId");
+
+                    b.HasIndex("MemberId");
+
+                    b.ToTable("Loans");
+                });
+
+            modelBuilder.Entity("Member", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("Members");
+                });
+
+            modelBuilder.Entity("LibraryApi.Models.LoanRequest", b =>
+                {
+                    b.HasOne("LibraryApi.Models.Book", "Book")
+                        .WithMany("LoanRequests")
+                        .HasForeignKey("BookId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Member", "Member")
+                        .WithMany("LoanRequests")
+                        .HasForeignKey("MemberId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Book");
+
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("Loan", b =>
                 {
                     b.HasOne("LibraryApi.Models.Book", "Book")
                         .WithMany("Loans")
@@ -179,7 +226,7 @@ namespace LibraryApi.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("LibraryApi.Models.Member", "Member")
+                    b.HasOne("Member", "Member")
                         .WithMany("Loans")
                         .HasForeignKey("MemberId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -190,13 +237,33 @@ namespace LibraryApi.Migrations
                     b.Navigation("Member");
                 });
 
+            modelBuilder.Entity("Member", b =>
+                {
+                    b.HasOne("LibraryApi.Models.User", "User")
+                        .WithOne("Member")
+                        .HasForeignKey("Member", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LibraryApi.Models.Book", b =>
                 {
+                    b.Navigation("LoanRequests");
+
                     b.Navigation("Loans");
                 });
 
-            modelBuilder.Entity("LibraryApi.Models.Member", b =>
+            modelBuilder.Entity("LibraryApi.Models.User", b =>
                 {
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("Member", b =>
+                {
+                    b.Navigation("LoanRequests");
+
                     b.Navigation("Loans");
                 });
 #pragma warning restore 612, 618

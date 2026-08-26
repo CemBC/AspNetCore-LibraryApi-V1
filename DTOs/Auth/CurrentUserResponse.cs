@@ -4,7 +4,16 @@ public class CurrentUserResponse
 {
     public int Id { get; set; }
 
-    public string Email { get; set; } = string.Empty;
 
-    public string Role { get; set; } = string.Empty;
+    public string Email { get; set; } = null!;
+
+
+    public string Role { get; set; } = null!;
+
+
+
+    public int? MemberId { get; set; }
+
+
+    public string? FullName { get; set; }
 }

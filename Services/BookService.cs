@@ -1,5 +1,7 @@
-﻿using LibraryApi.Data;
+﻿using AutoMapper;
+using LibraryApi.Data;
 using LibraryApi.DTOs.Books;
+using LibraryApi.DTOs.Common;
 using LibraryApi.Exceptions;
 using LibraryApi.Models;
 using Microsoft.EntityFrameworkCore;
@@ -9,18 +11,49 @@ namespace LibraryApi.Services;
 public class BookService
 {
     private readonly LibraryDbContext _context;
+    private readonly IMapper _mapper;
 
-    public BookService(LibraryDbContext context)
+    public BookService(LibraryDbContext context , IMapper mapper)
     {
         _context = context;
+        _mapper = mapper;
     }
 
 
-    public async Task<List<Book>> GetAll()
+    public async Task<PagedResponse<BookResponse>> GetAllAsync(BookQuery query)
     {
-        return await _context.Books
-            .AsNoTracking()
-            .ToListAsync();
+        IQueryable<Book> booksQuery = _context.Books.AsNoTracking();
+
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            string search = query.Search.Trim();
+
+            booksQuery = booksQuery.Where(b => b.Title.Contains(search) ||b.Author.Contains(search));
+        }
+
+        if (query.Status.HasValue) booksQuery = booksQuery.Where(b => b.Status == query.Status.Value);
+
+        booksQuery = query.SortBy?.ToLower() switch
+        {
+            "title" => query.Descending ? booksQuery.OrderByDescending(b => b.Title) : booksQuery.OrderBy(b => b.Title),
+
+            "author" => query.Descending ? booksQuery.OrderByDescending(b => b.Author) : booksQuery.OrderBy(b => b.Author),
+
+            _ => booksQuery.OrderBy(b => b.Id)
+        };
+
+        int totalCount = await booksQuery.CountAsync();
+
+        List<Book> books =  await booksQuery.Skip((query.Page - 1) * query.PageSize).Take(query.PageSize).ToListAsync();
+
+        return new PagedResponse<BookResponse>
+        {
+            Items = _mapper.Map<List<BookResponse>>(books),
+            Page = query.Page,
+            PageSize = query.PageSize,
+            TotalCount = totalCount,
+            TotalPages =(int)Math.Ceiling(totalCount / (double)query.PageSize)
+        };
     }
 
 

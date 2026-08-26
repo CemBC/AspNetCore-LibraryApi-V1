@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LibraryApi.Migrations
 {
     [DbContext(typeof(LibraryDbContext))]
-    [Migration("20260820150304_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20260824172632_AddBookStatus")]
+    partial class AddBookStatus
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -38,10 +38,8 @@ namespace LibraryApi.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
-                    b.Property<bool>("IsAvailable")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -57,14 +55,14 @@ namespace LibraryApi.Migrations
                         {
                             Id = 1,
                             Author = "Fyodor Dostoyevski",
-                            IsAvailable = true,
+                            Status = 1,
                             Title = "Suç ve Ceza"
                         },
                         new
                         {
                             Id = 2,
                             Author = "George Orwell",
-                            IsAvailable = true,
+                            Status = 1,
                             Title = "1984"
                         });
                 });
@@ -98,7 +96,7 @@ namespace LibraryApi.Migrations
                     b.ToTable("Loans");
                 });
 
-            modelBuilder.Entity("LibraryApi.Models.Member", b =>
+            modelBuilder.Entity("LibraryApi.Models.User", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -111,28 +109,54 @@ namespace LibraryApi.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("RefreshTokenExpiryTime")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("RefreshTokenHash")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("Member", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("FullName")
                         .IsRequired()
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
-                    b.ToTable("Members");
+                    b.HasIndex("UserId")
+                        .IsUnique();
 
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Email = "john.doe@example.com",
-                            FullName = "John Doe"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Email = "jane.smith@example.com",
-                            FullName = "Jane Smith"
-                        });
+                    b.ToTable("Members");
                 });
 
             modelBuilder.Entity("LibraryApi.Models.Loan", b =>
@@ -143,7 +167,7 @@ namespace LibraryApi.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("LibraryApi.Models.Member", "Member")
+                    b.HasOne("Member", "Member")
                         .WithMany("Loans")
                         .HasForeignKey("MemberId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -154,12 +178,28 @@ namespace LibraryApi.Migrations
                     b.Navigation("Member");
                 });
 
+            modelBuilder.Entity("Member", b =>
+                {
+                    b.HasOne("LibraryApi.Models.User", "User")
+                        .WithOne("Member")
+                        .HasForeignKey("Member", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LibraryApi.Models.Book", b =>
                 {
                     b.Navigation("Loans");
                 });
 
-            modelBuilder.Entity("LibraryApi.Models.Member", b =>
+            modelBuilder.Entity("LibraryApi.Models.User", b =>
+                {
+                    b.Navigation("Member");
+                });
+
+            modelBuilder.Entity("Member", b =>
                 {
                     b.Navigation("Loans");
                 });

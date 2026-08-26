@@ -1,9 +1,9 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using LibraryApi.Services;
 using FluentValidation;
 using LibraryApi.DTOs.Auth;
 using Microsoft.AspNetCore.Authorization;
 using System.Security.Claims;
+using LibraryApi.Services.Interfaces;
 
 namespace LibraryApi.Controllers
 {

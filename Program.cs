@@ -65,9 +65,11 @@ builder.Services.AddScoped<MemberService>();
 builder.Services.AddScoped<LoanService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AdminService>(); 
-
-
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
+builder.Services
+    .AddHealthChecks()
+    .AddDbContextCheck<LibraryDbContext>();
 
 
 builder.Services.AddOpenApi();
@@ -115,5 +117,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/health").AllowAnonymous();
 
 app.Run();

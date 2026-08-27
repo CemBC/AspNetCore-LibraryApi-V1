@@ -3,6 +3,7 @@ using LibraryApi.Data;
 using LibraryApi.DTOs.Common;
 using LibraryApi.DTOs.Loans;
 using LibraryApi.Exceptions;
+using LibraryApi.Helpers;
 using LibraryApi.Models;
 using LibraryApi.Models.Status;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +16,13 @@ public class LoanService
 
     private readonly IMapper _mapper;
 
-    public LoanService(LibraryDbContext context, IMapper mapper)
+    private readonly ILogger<LoanService> _logger;
+
+    public LoanService(LibraryDbContext context, IMapper mapper , ILogger<LoanService> logger)
     {
         _context = context;
         _mapper = mapper;
+        _logger = logger;
     }
 
 
@@ -83,7 +87,7 @@ public class LoanService
     }
 
 
-    public async Task<Loan> CreateLoan(CreateLoanRequest request)
+    public async Task<Loan> CreateLoan(CreateLoanRequest request , int UserId)
     {
         Book? book = await _context.Books
             .FirstOrDefaultAsync(b => b.Id == request.BookId);
@@ -105,12 +109,24 @@ public class LoanService
             throw new BadRequestException("Book is not available for loan.");
 
 
+        bool hasOverdueLoan = await _context.Loans.AnyAsync(l => l.MemberId == request.MemberId && l.ReturnDate == null && l.DueDate < DateTime.UtcNow);
+
+        if (hasOverdueLoan)throw new BadRequestException("This member has an overdue loan and cannot receive another book.");
+        
+
+        int currentLoanCount = await _context.Loans.CountAsync(l => l.MemberId == request.MemberId && l.ReturnDate == null);
+
+        if (currentLoanCount >= LibraryRules.MaxActiveLoansPerMember) throw new BadRequestException( $"This member already has the maximum of {LibraryRules.MaxActiveLoansPerMember} active loans.");
+        
+
         Loan loan = new Loan
         {
             BookId = request.BookId,
             MemberId = request.MemberId,
-            LoanDate = DateTime.Now,
-            ReturnDate = null
+            LoanDate = DateTime.UtcNow,
+            DueDate = DateTime.UtcNow.AddDays(7),
+            ReturnDate = null,
+            Status = LoanStatus.Active
         };
 
 
@@ -121,12 +137,12 @@ public class LoanService
 
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("Loan with ID: {LoanId} has been created by the User with ID: {UserId}" , loan.Id , UserId);
 
         return loan;
     }
 
-    public async Task<Loan> CreateFromRequestAsync(
-    LoanRequest request)
+    public async Task<Loan> CreateFromRequestAsync(LoanRequest request , int UserId)
     {
         Book? book = await _context.Books.FirstOrDefaultAsync(b => b.Id == request.BookId);
 
@@ -159,12 +175,13 @@ public class LoanService
 
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("Loan wih ID: {LoanId} of the Member with ID: {MemberId} has been created by the User with ID: {UserId}" , loan.Id , loan.MemberId , UserId);
 
         return loan;
     }
 
 
-    public async Task ReturnBook(int loanId)
+    public async Task ReturnBook(int loanId , int UserId)
     {
         Loan? loan = await _context.Loans.FirstOrDefaultAsync(l => l.Id == loanId);
 
@@ -180,8 +197,13 @@ public class LoanService
 
         book.Status = BookStatus.Available;
 
-
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Loan with ID: {LoanId} returned by Member with ID: {MemberId} with the acceptance of User with ID: {UserId} . Book  with ID: {BookId} is available again.",
+            loan.Id,
+            loan.MemberId,
+            UserId,
+            loan.BookId);
     }
 
     public async Task UpdateOverdueLoansAsync()
@@ -199,8 +221,11 @@ public class LoanService
             loan.Status = LoanStatus.Overdue;
         }
 
-
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("{Count} loans marked as overdue.",
+            overdueLoans.Count);
+
     }
 
 
@@ -224,8 +249,7 @@ public class LoanService
         return _mapper.Map<List<LoanResponse>>(loans);
     }
 
-    public async Task<PagedResponse<LoanResponse>> GetActiveLoansAsync(
-    LoanQuery query)
+    public async Task<PagedResponse<LoanResponse>> GetActiveLoansAsync(LoanQuery query)
     {
         IQueryable<Loan> loansQuery = _context.Loans.Include(l => l.Book).Include(l => l.Member)
             .Where(l => l.Status == LoanStatus.Active)

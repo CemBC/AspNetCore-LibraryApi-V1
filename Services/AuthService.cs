@@ -22,11 +22,14 @@ namespace LibraryApi.Services
 
         private readonly IConfiguration _configuration;
 
-        public AuthService(LibraryDbContext context, IPasswordHasher<User> passwordHasher , IConfiguration configuration)
+        private readonly ILogger<AuthService> _logger;
+
+        public AuthService(LibraryDbContext context, IPasswordHasher<User> passwordHasher , IConfiguration configuration , ILogger<AuthService> logger)
         {
             _context = context;
             _passwordHasher = passwordHasher;
             _configuration = configuration;
+            _logger = logger;
         }
         public async Task RegisterAsync(RegisterRequest request)
         {
@@ -56,20 +59,34 @@ namespace LibraryApi.Services
 
 
             await _context.Users.AddAsync(user);
+
             
 
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("User {UserId} registered successfully.", user.Id);
         }
 
         public async Task LogoutAsync(int UserId)
         {
             User? user = await _context.Users.FirstOrDefaultAsync(u=> u.Id == UserId);
-            if(user is null) throw new UnauthorizedException("User not found");
+
+            if (user is null)
+            {
+                _logger.LogWarning(
+                    "Logout failed because user {UserId} was not found.",
+                    UserId);
+
+                throw new UnauthorizedException("User not found");
+            }
 
             user.RefreshTokenHash = null;
             user.RefreshTokenExpiryTime = null;
 
+
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("User {UserId} logged out successfully.", user.Id);
         }
 
         public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -78,13 +95,16 @@ namespace LibraryApi.Services
 
             if(user is null)
             {
+                _logger.LogWarning("Failed login attempt: user not found.");
                 throw new UnauthorizedException("Invalid email or password");
             }
 
             PasswordVerificationResult result = _passwordHasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
             if(result == PasswordVerificationResult.Failed)
             {
+                _logger.LogWarning("Failed login attempt for user {UserId}: invalid password.", user.Id);
                 throw new UnauthorizedException("Invalid email or password");
+
             }
 
             string accessToken = CreateAccesToken(user);
@@ -96,6 +116,8 @@ namespace LibraryApi.Services
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(_configuration.GetValue<int>("Jwt:RefreshTokenDays"));
 
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("User {UserId} logged in successfully.",user.Id);
 
             return new AuthResponse
             {
@@ -128,9 +150,17 @@ namespace LibraryApi.Services
 
             User? user = await _context.Users.FirstOrDefaultAsync(u => u.RefreshTokenHash == hashedToken);
 
-            if(user is null) throw new UnauthorizedException("Invalid refresh token");
+            if (user is null)
+            {
+                _logger.LogWarning("Invalid refresh token attempt");
+                throw new UnauthorizedException("Invalid refresh token");
+            }
 
-            if(user.RefreshTokenExpiryTime <= DateTime.UtcNow) throw new UnauthorizedException("Refresh token has expired");
+            if (user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+            {
+                _logger.LogWarning("Refresh token has expired for User {ID}" , user.Id);
+                throw new UnauthorizedException("Refresh token has expired");
+            }
 
             string accessToken = CreateAccesToken(user);
             string newRefreshToken = CreateRefreshToken();
@@ -140,6 +170,8 @@ namespace LibraryApi.Services
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(_configuration.GetValue<int>("Jwt:RefreshTokenDays"));
 
             await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Tokens refreshed successfully for user {UserId}.", user.Id);
 
             return new AuthResponse
             {

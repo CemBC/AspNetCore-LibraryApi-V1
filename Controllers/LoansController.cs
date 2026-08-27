@@ -16,6 +16,9 @@ namespace LibraryApi.Controllers;
 [Route("api/[controller]")]
 public class LoansController : ControllerBase
 {
+    private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
+
     private readonly LoanService _loanService;
     private readonly IValidator<CreateLoanRequest> _loanValidator;
     private readonly IMapper _mapper;
@@ -48,7 +51,7 @@ public class LoansController : ControllerBase
         return Ok(response);
     }
 
-
+    [Authorize(Roles = "Admin")]
     [HttpGet("{id:int}")]
     public async Task<ActionResult<LoanResponse>> GetById(int id)
     {
@@ -61,25 +64,20 @@ public class LoansController : ControllerBase
     }
 
 
+    [Authorize(Roles = "Admin")]
     [HttpPost]
     public async Task<ActionResult<LoanResponse>> CreateLoan(
         CreateLoanRequest request)
     {
-        var validationResult =
-            await _loanValidator.ValidateAsync(request);
+        var validationResult = await _loanValidator.ValidateAsync(request);
 
 
-        if (!validationResult.IsValid)
-            return BadRequest(validationResult.Errors);
+        if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
 
 
-        Loan createdLoan =
-            await _loanService.CreateLoan(request);
+        Loan createdLoan =await _loanService.CreateLoan(request , CurrentUserId);
 
-
-        LoanResponse response =
-            _mapper.Map<LoanResponse>(createdLoan);
-
+        LoanResponse response = _mapper.Map<LoanResponse>(createdLoan);
 
         return CreatedAtAction(
             nameof(GetById),
@@ -88,10 +86,11 @@ public class LoansController : ControllerBase
     }
 
 
+    [Authorize(Roles = "Admin")]
     [HttpPut("{id:int}/return")]
     public async Task<ActionResult> ReturnBook(int id)
     {
-        await _loanService.ReturnBook(id);
+        await _loanService.ReturnBook(id , CurrentUserId);
 
         return NoContent();
     }

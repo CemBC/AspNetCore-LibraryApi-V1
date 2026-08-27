@@ -3,10 +3,12 @@ using LibraryApi.Data;
 using LibraryApi.DTOs.Common;
 using LibraryApi.DTOs.LoanRequests;
 using LibraryApi.Exceptions;
+using LibraryApi.Helpers;
 using LibraryApi.Models;
 using LibraryApi.Models.Status;
 using LibraryApi.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 
 namespace LibraryApi.Services;
 
@@ -17,14 +19,17 @@ public class LoanRequestService : ILoanRequestService
     private readonly LoanService _loanService;
     private readonly IMapper _mapper;
 
-    public LoanRequestService(LibraryDbContext context ,IMapper mapper , LoanService loanService)
+    private readonly ILogger<LoanRequestService> _logger;
+
+    public LoanRequestService(LibraryDbContext context ,IMapper mapper , LoanService loanService , ILogger<LoanRequestService> logger)
     {
         _context = context;
         _mapper = mapper;   
         _loanService = loanService;
+        _logger = logger;
     }
 
-    public async Task<LoanRequestResponse> ApproveAsync(int id)
+    public async Task<LoanRequestResponse> ApproveAsync(int id , int UserId)
     {
        LoanRequest? request = await _context.LoanRequest.Include(l => l.Book).Include(l => l.Member)
             .FirstOrDefaultAsync(l => l.Id == id);
@@ -32,25 +37,43 @@ public class LoanRequestService : ILoanRequestService
         if(request is null) throw new NotFoundException("Loan request not found."); 
         if(request.Status != LoanRequestStatus.Pending) throw new BadRequestException("Only pending requests can be approved.");
 
-        await _loanService.CreateFromRequestAsync(request);
+        bool hasOverdueLoan = await _context.Loans.AnyAsync(l => l.MemberId == request.MemberId &&  l.ReturnDate == null &&  l.DueDate < DateTime.UtcNow);
+
+        if (hasOverdueLoan) throw new BadRequestException("This member has an overdue loan and cannot receive another book.");
+
+        int currentLoanCount = await _context.Loans.CountAsync(l =>l.MemberId == request.MemberId && l.ReturnDate == null);
+
+        if (currentLoanCount >= LibraryRules.MaxActiveLoansPerMember) throw new BadRequestException($"This member already has the maximum of {LibraryRules.MaxActiveLoansPerMember} active loans.");
+
+        await _loanService.CreateFromRequestAsync(request , UserId);
 
         request.Status = LoanRequestStatus.Approved;
 
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("Loan request {LoanRequestId} approved for member {MemberId} and book {BookId} by the User with ID: {UserId}.",
+            request.Id,
+            request.MemberId,
+            request.BookId,
+            UserId);
+
         return _mapper.Map<LoanRequestResponse>(request);
     }
 
-    public async Task<LoanRequestResponse> CreateAsync(
-        int userId,
-        CreateLoanRequestDto request)
+    public async Task<LoanRequestResponse> CreateAsync(int userId,CreateLoanRequestDto request)
     {
         
         Member? member = await _context.Members.FirstOrDefaultAsync(m => m.UserId == userId);
 
         if (member is null) throw new NotFoundException("Member not found.");
-        
 
+        bool hasOverdueLoan = await _context.Loans.AnyAsync(l => l.MemberId == member.Id && l.ReturnDate == null && l.DueDate < DateTime.UtcNow);
+
+        if (hasOverdueLoan) throw new BadRequestException("You cannot request a new book while you have an overdue loan.");
+
+        int currentLoanCount = await _context.Loans.CountAsync(l => l.MemberId == member.Id && l.ReturnDate == null);
+
+        if (currentLoanCount >= LibraryRules.MaxActiveLoansPerMember) throw new BadRequestException($"A member can have at most {LibraryRules.MaxActiveLoansPerMember} active loans.");
 
 
         Book? book = await _context.Books.FirstOrDefaultAsync(b => b.Id == request.BookId);
@@ -63,6 +86,7 @@ public class LoanRequestService : ILoanRequestService
         bool hasPendingRequest =  await _context.LoanRequest.AnyAsync(l =>l.BookId == request.BookId &&l.Status == LoanRequestStatus.Pending);
 
         if (hasPendingRequest) throw new BadRequestException("A pending request already exists for this book.");
+
 
         LoanRequest loanRequest = new LoanRequest
         {
@@ -86,6 +110,11 @@ public class LoanRequestService : ILoanRequestService
         await _context.LoanRequest.AddAsync(loanRequest);
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Loan request {LoanRequestId} created by member {MemberId} for book {BookId}.",
+            loanRequest.Id,
+            loanRequest.MemberId,
+            loanRequest.BookId);
 
         return _mapper.Map<LoanRequestResponse>(loanRequest);
     }
@@ -140,7 +169,7 @@ public class LoanRequestService : ILoanRequestService
         };
     }
 
-    public async Task<LoanRequestResponse> RejectAsync(int id)
+    public async Task<LoanRequestResponse> RejectAsync(int id  , int UserId)
     {
         LoanRequest? request = await _context.LoanRequest.Include(l => l.Book).Include(l => l.Member)
             .FirstOrDefaultAsync(l => l.Id == id);
@@ -153,6 +182,12 @@ public class LoanRequestService : ILoanRequestService
         request.Book.Status = BookStatus.Available;
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Loan request {LoanRequestId} rejected for member {MemberId} and book {BookId} by the User with ID: {UserId}.",
+            request.Id,
+            request.MemberId,
+            request.BookId,
+            UserId);
 
         return _mapper.Map<LoanRequestResponse>(request);
 

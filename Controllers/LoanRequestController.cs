@@ -12,6 +12,8 @@ namespace LibraryApi.Controllers;
 [Route("api/[controller]")]
 public class LoanRequestsController : ControllerBase
 {
+    private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
     private readonly ILoanRequestService _loanRequestService;
 
     private readonly IValidator<LoanRequestQuery> _loanRequestQueryValidator;
@@ -22,7 +24,7 @@ public class LoanRequestsController : ControllerBase
         _loanRequestQueryValidator = loanRequestQueryValidator;
     }
 
-
+    [Authorize(Roles = "Member")]
     [HttpGet("pending/my")]
     public async Task<ActionResult<LoanRequestResponse>> GetMyPending()
     {
@@ -39,7 +41,7 @@ public class LoanRequestsController : ControllerBase
     [HttpPost("{id}/approve")]
     public async Task<ActionResult<LoanRequestResponse>> Approve(int id)
     {
-        LoanRequestResponse response = await _loanRequestService.ApproveAsync(id);
+        LoanRequestResponse response = await _loanRequestService.ApproveAsync(id, CurrentUserId);
 
 
         return Ok(response);
@@ -49,7 +51,7 @@ public class LoanRequestsController : ControllerBase
     [HttpPost("{id}/reject")]
     public async Task<ActionResult<LoanRequestResponse>> Reject(int id)
     {
-        LoanRequestResponse response = await _loanRequestService.RejectAsync(id);
+        LoanRequestResponse response = await _loanRequestService.RejectAsync(id , CurrentUserId);
 
 
         return Ok(response);

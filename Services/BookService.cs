@@ -12,11 +12,12 @@ public class BookService
 {
     private readonly LibraryDbContext _context;
     private readonly IMapper _mapper;
-
-    public BookService(LibraryDbContext context , IMapper mapper)
+    private readonly ILogger<BookService> _logger;
+    public BookService(LibraryDbContext context , IMapper mapper , ILogger<BookService> logger)
     {
         _context = context;
         _mapper = mapper;
+        _logger = logger;
     }
 
 
@@ -72,7 +73,7 @@ public class BookService
     }
 
 
-    public async Task<Book> AddBook(CreateBookRequest request)
+    public async Task<Book> AddBook(CreateBookRequest request , int UserId)
     {
         Book book = new Book
         {
@@ -85,12 +86,16 @@ public class BookService
 
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("Book {BookId} created with title {BookTitle} by the User with ID:{UserId}",
+            book.Id,
+            book.Title,
+            UserId);
 
         return book;
     }
 
 
-    public async Task Update(int id, UpdateBookRequest request)
+    public async Task Update(int id, UpdateBookRequest request , int UserId)
     {
         Book? book = await _context.Books.FindAsync(id);
 
@@ -101,13 +106,16 @@ public class BookService
 
         book.Title = request.Title;
         book.Author = request.Author;
-
+        
+        
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Book with ID:  {BookId} updated with values {BookTitle} , {BookAuthor} by the User with ID: {UserId}", book.Id, book.Title, book.Author, UserId);
     }
 
 
-    public async Task Delete(int id)
+    public async Task Delete(int id , int UserId)
     {
         Book? book = await _context.Books.FindAsync(id);
 
@@ -118,7 +126,12 @@ public class BookService
 
         _context.Books.Remove(book);
 
-
+        
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Book with ID: {BookId} deleted by the User with ID:{UserID}",
+            book.Id,
+            UserId);
+
     }
 }

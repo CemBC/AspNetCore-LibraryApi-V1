@@ -12,6 +12,7 @@ namespace LibraryApi.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
+
         private readonly IAuthService _authService;
         private readonly IValidator<RegisterRequest> _registerRequestValidator;
 
@@ -70,6 +71,8 @@ namespace LibraryApi.Controllers
 
             return NoContent();
         }
+
+
 
         [HttpPost("refresh")]
         public async Task<ActionResult<AuthResponse>> RefreshToken(RefreshTokenRequest request)

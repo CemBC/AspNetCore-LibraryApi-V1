@@ -9,9 +9,9 @@ public interface ILoanExtensionService
 
     Task<PagedResponse<LoanExtensionResponse>> GetPendingRequestsAsync(LoanExtensionRequestQuery query);
 
-    Task<LoanExtensionResponse> ApproveAsync(int id);
+    Task<LoanExtensionResponse> ApproveAsync(int id , int UserId);
 
-    Task<LoanExtensionResponse> RejectAsync(int id);
+    Task<LoanExtensionResponse> RejectAsync(int id , int UserId);
 
     Task<List<LoanExtensionResponse>> GetMyPendingRequestsAsync(int UserId);
 

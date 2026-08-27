@@ -15,10 +15,12 @@ public class MemberService
 
     private readonly IMapper _mapper;
 
-    public MemberService(LibraryDbContext context , IMapper mapper)
+    private readonly ILogger<MemberService> _logger;    
+    public MemberService(LibraryDbContext context , IMapper mapper , ILogger<MemberService> logger)
     {
         _context = context;
         _mapper = mapper;
+        _logger = logger;
     }
 
 
@@ -68,15 +70,14 @@ public class MemberService
             .FirstOrDefaultAsync(m => m.Id == id);
 
 
-        if (member is null)
-            throw new NotFoundException("Member not found.");
+        if (member is null) throw new NotFoundException("Member not found.");
 
 
         return member;
     }
 
 
-    public async Task<Member> CreateAsync(CreateMemberRequest request)
+    public async Task<Member> CreateAsync(CreateMemberRequest request , int UserId)
     {
         Member member = new Member
         {
@@ -88,6 +89,7 @@ public class MemberService
 
         await _context.SaveChangesAsync();
 
+        _logger.LogInformation("Member with ID: {MemberId} created by the User with ID: {UserId} ", member.Id , UserId);
 
         return member;
     }
@@ -95,7 +97,8 @@ public class MemberService
 
     public async Task UpdateAsync(
         int id,
-        UpdateMemberRequest request)
+        UpdateMemberRequest request,
+        int UserId)
     {
         Member? member = await _context.Members
             .FirstOrDefaultAsync(m => m.Id == id);
@@ -107,12 +110,13 @@ public class MemberService
 
         member.FullName = request.FullName;
 
-
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Member with ID: {MemberId} has been updated by the User with ID: {UserId}", member.Id, UserId);
     }
 
 
-    public async Task DeleteAsync(int id)
+    public async Task DeleteAsync(int id , int UserId)
     {
         Member? member = await _context.Members
             .FirstOrDefaultAsync(m => m.Id == id);
@@ -125,6 +129,8 @@ public class MemberService
         _context.Members.Remove(member);
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Member with ID: {MemberId} has been deleted by the User with ID: {UserId}", member.Id, UserId);
     }
 
     public async Task<List<LoanResponse>> GetMemberLoansAsync(int memberId)

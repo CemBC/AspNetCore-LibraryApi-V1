@@ -6,13 +6,16 @@ using LibraryApi.Models;
 using LibraryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace LibraryApi.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class BooksController : ControllerBase
 {
+    private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
     private readonly BookService _bookService;
     private readonly IValidator<CreateBookRequest> _createValidator;
     private readonly IValidator<UpdateBookRequest> _updateValidator;
@@ -74,7 +77,7 @@ public class BooksController : ControllerBase
             return BadRequest(validationResult.Errors);
 
 
-        Book book = await _bookService.AddBook(request);
+        Book book = await _bookService.AddBook(request , CurrentUserId);
 
 
         BookResponse response =
@@ -102,7 +105,7 @@ public class BooksController : ControllerBase
             return BadRequest(validationResult.Errors);
 
 
-        await _bookService.Update(id, request);
+        await _bookService.Update(id, request , CurrentUserId);
 
 
         return NoContent();
@@ -114,7 +117,7 @@ public class BooksController : ControllerBase
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
     {
-        await _bookService.Delete(id);
+        await _bookService.Delete(id , CurrentUserId);
 
         return NoContent();
     }

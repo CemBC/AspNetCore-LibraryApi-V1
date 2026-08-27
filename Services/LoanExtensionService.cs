@@ -3,6 +3,7 @@ using LibraryApi.Data;
 using LibraryApi.DTOs.Common;
 using LibraryApi.DTOs.LoanExtensions;
 using LibraryApi.Exceptions;
+using LibraryApi.Helpers;
 using LibraryApi.Models;
 using LibraryApi.Models.Status;
 using Microsoft.EntityFrameworkCore;
@@ -13,13 +14,15 @@ public class LoanExtensionService : ILoanExtensionService
     private readonly LibraryDbContext _context;
     private readonly IMapper _mapper;
 
-
+    private readonly ILogger<LoanExtensionService>  _logger;
     public LoanExtensionService(
         LibraryDbContext context,
-        IMapper mapper)
+        IMapper mapper,
+        ILogger<LoanExtensionService> logger)
     {
         _context = context;
         _mapper = mapper;
+        _logger = logger;
     }
 
     public async Task<LoanExtensionResponse> CreateAsync(int userId, CreateLoanExtensionRequestDto request)
@@ -34,11 +37,18 @@ public class LoanExtensionService : ILoanExtensionService
         if (loan.MemberId != member.Id) throw new BadRequestException("This loan does not belong to this member.");
         
         if (loan.Status != LoanStatus.Active)throw new BadRequestException("Only active loans can be extended.");
-       
+        if (loan.DueDate < DateTime.UtcNow) throw new BadRequestException( "An overdue loan cannot be extended.");
+        
+
         bool extensionExists = await _context.LoanExtensionRequest.AnyAsync(x => x.LoanId == loan.Id && x.Status == LoanExtensionStatus.Pending);
+
 
         if (extensionExists)throw new BadRequestException( "An extension request already exists.");
 
+        int approvedExtensionCount = await _context.LoanExtensionRequest.CountAsync(e => e.LoanId == loan.Id && e.Status == LoanExtensionStatus.Approved);
+
+        if (approvedExtensionCount >= LibraryRules.MaxApprovedExtensionsPerLoan) throw new BadRequestException($"A loan can be extended at most {LibraryRules.MaxApprovedExtensionsPerLoan} times.");
+        
 
         LoanExtensionRequest extensionRequest = new LoanExtensionRequest
         {
@@ -64,7 +74,7 @@ public class LoanExtensionService : ILoanExtensionService
 
         await _context.SaveChangesAsync();
 
-
+        _logger.LogInformation("Loan Extension Request with ID: {LoanExtensionId} has been created by the User with ID: {UserId}", request.LoanId , userId);
 
         return _mapper.Map<LoanExtensionResponse>(extensionRequest);
     }
@@ -108,7 +118,7 @@ public class LoanExtensionService : ILoanExtensionService
     }
 
 
-    public async Task<LoanExtensionResponse> ApproveAsync(int id)
+    public async Task<LoanExtensionResponse> ApproveAsync(int id , int UserId)
     {
         LoanExtensionRequest? request =await _context.LoanExtensionRequest.Include(x => x.Loan).ThenInclude(l => l.Book).Include(x => x.Member)
             .FirstOrDefaultAsync(x => x.Id == id);
@@ -116,16 +126,22 @@ public class LoanExtensionService : ILoanExtensionService
         if (request is null)throw new NotFoundException("Extension request not found.");        
         if (request.Status != LoanExtensionStatus.Pending) throw new BadRequestException("Extension request is not pending.");
         if (request.Loan.Status != LoanStatus.Active) throw new BadRequestException("Only active loans can be extended.");
+        int approvedExtensionCount =  await _context.LoanExtensionRequest.CountAsync(e => e.LoanId == request.LoanId && e.Status == LoanExtensionStatus.Approved);
+
+        if (approvedExtensionCount >= LibraryRules.MaxApprovedExtensionsPerLoan)  throw new BadRequestException($"This loan has already reached the maximum of {LibraryRules.MaxApprovedExtensionsPerLoan} approved extensions.");
         
 
         request.Status = LoanExtensionStatus.Approved;
         request.Loan.DueDate =  request.Loan.DueDate.AddDays(7);
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Loan Extension Request with ID: {LoanExtensionId} has been approved by the User with ID: {UserId}", request.LoanId , UserId);
+
         return _mapper.Map<LoanExtensionResponse>(request);
     }
 
-    public async Task<LoanExtensionResponse> RejectAsync(int id)
+    public async Task<LoanExtensionResponse> RejectAsync(int id , int UserId)
     {
         LoanExtensionRequest? request = await _context.LoanExtensionRequest.Include(x => x.Loan).ThenInclude(l => l.Book).Include(x => x.Member)
             .FirstOrDefaultAsync(x => x.Id == id);
@@ -138,6 +154,8 @@ public class LoanExtensionService : ILoanExtensionService
         request.Status = LoanExtensionStatus.Rejected;
 
         await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Loan Extension Request with ID: {LoanExtensionId} has been rejected by the User with ID: {UserId}", request.LoanId , UserId);
 
         return _mapper.Map<LoanExtensionResponse>(request);
     }

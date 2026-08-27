@@ -13,6 +13,8 @@ namespace LibraryApi.Controllers;
 [Route("api/[controller]")]
 public class LoanExtensionsController : ControllerBase
 {
+
+    private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
     private readonly ILoanExtensionService _loanExtensionService;
 
     private readonly IValidator<LoanExtensionRequestQuery> _loanExtensionRequestQueryValidator;
@@ -58,7 +60,7 @@ public class LoanExtensionsController : ControllerBase
     [HttpPost("{id}/approve")]
     public async Task<ActionResult<LoanExtensionResponse>> Approve(int id)
     {
-        LoanExtensionResponse response = await _loanExtensionService.ApproveAsync(id);
+        LoanExtensionResponse response = await _loanExtensionService.ApproveAsync(id , CurrentUserId);
 
         return Ok(response);
     }
@@ -68,7 +70,7 @@ public class LoanExtensionsController : ControllerBase
     [HttpPost("{id}/reject")]
     public async Task<ActionResult<LoanExtensionResponse>> Reject(int id)
     {
-        LoanExtensionResponse response = await _loanExtensionService.RejectAsync(id);
+        LoanExtensionResponse response = await _loanExtensionService.RejectAsync(id , CurrentUserId);
 
 
         return Ok(response);

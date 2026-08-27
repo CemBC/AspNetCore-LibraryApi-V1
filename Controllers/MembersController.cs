@@ -8,14 +8,17 @@ using LibraryApi.Services;
 using LibraryApi.Validators.Members;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace LibraryApi.Controllers;
 
-[Authorize]
+[Authorize(Roles = "Admin")]
 [ApiController]
 [Route("api/[controller]")]
 public class MembersController : ControllerBase
 {
+    private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+
     private readonly MemberService _memberService;
 
     private readonly IValidator<CreateMemberRequest> _createMemberValidator;
@@ -41,7 +44,6 @@ public class MembersController : ControllerBase
     }
 
 
-    [Authorize(Roles = "Admin")]
     [HttpGet]
     public async Task<ActionResult<PagedResponse<MemberResponse>>> GetAll([FromQuery] MemberQuery query)
     {
@@ -83,7 +85,7 @@ public class MembersController : ControllerBase
 
 
         Member member =
-            await _memberService.CreateAsync(request);
+            await _memberService.CreateAsync(request , CurrentUserId);
 
 
         MemberResponse response =
@@ -110,7 +112,8 @@ public class MembersController : ControllerBase
             return BadRequest(validationResult.Errors);
 
 
-        await _memberService.UpdateAsync(id, request);
+
+        await _memberService.UpdateAsync(id, request , CurrentUserId);
 
 
         return NoContent();
@@ -119,20 +122,18 @@ public class MembersController : ControllerBase
 
     [HttpDelete("{id:int}")]
     public async Task<IActionResult> Delete(int id)
-    {
-        await _memberService.DeleteAsync(id);
+    { 
+        await _memberService.DeleteAsync(id , CurrentUserId);
 
 
         return NoContent();
     }
 
 
-    [Authorize(Roles = "Admin")]
     [HttpGet("{id:int}/loans")]
     public async Task<ActionResult<List<LoanResponse>>> GetMemberLoans(int id)
     {
-        var response =
-            await _memberService.GetMemberLoansAsync(id);
+        var response = await _memberService.GetMemberLoansAsync(id);
 
         return Ok(response);
     }

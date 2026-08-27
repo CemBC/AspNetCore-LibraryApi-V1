@@ -9,9 +9,9 @@ namespace LibraryApi.Services.Interfaces
 
         Task<PagedResponse<LoanRequestResponse>> GetPendingRequestsAsync(LoanRequestQuery query);
 
-        Task<LoanRequestResponse> ApproveAsync(int id);
+        Task<LoanRequestResponse> ApproveAsync(int id , int UserId);
 
-        Task<LoanRequestResponse> RejectAsync(int id);
+        Task<LoanRequestResponse> RejectAsync(int id , int UserId);
 
         Task<List<LoanRequestResponse>> GetMyPendingRequestsAsync(int userId);
 

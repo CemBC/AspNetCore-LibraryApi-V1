@@ -26,6 +26,7 @@ namespace LibraryApi.Data
             modelBuilder.ApplyConfiguration(new LoanConfiguration());
             modelBuilder.ApplyConfiguration(new UserConfiguration());
             modelBuilder.ApplyConfiguration(new LoanRequestConfiguration());
+            modelBuilder.ApplyConfiguration(new LoanExtensionRequestConfiguration());
         }
     }
 }

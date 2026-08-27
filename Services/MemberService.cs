@@ -65,7 +65,7 @@ public class MemberService
 
     public async Task<Member> GetByIdAsync(int id)
     {
-        Member? member = await _context.Members
+        Member? member = await _context.Members.Include(m => m.User)
             .AsNoTracking()
             .FirstOrDefaultAsync(m => m.Id == id);
 

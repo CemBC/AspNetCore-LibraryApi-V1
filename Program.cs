@@ -64,6 +64,7 @@ builder.Services.AddScoped<BookService>();
 builder.Services.AddScoped<MemberService>();
 builder.Services.AddScoped<LoanService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<AdminService>(); 
 
 
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();

@@ -33,7 +33,8 @@ public sealed class MappingProfile : Profile
         CreateMap<UpdateBookRequest, Book>();
 
 
-        CreateMap<Member, MemberResponse>();
+        CreateMap<Member, MemberResponse>()
+            .ForMember(d => d.Email, o => o.MapFrom(s => s.User.Email));
 
         CreateMap<CreateMemberRequest, Member>();
 

@@ -10,19 +10,27 @@ The API is deployed to **Microsoft Azure** and uses **Azure SQL Database** in pr
 
 # Live Deployment
 
+The production API is hosted on **Microsoft Azure App Service** and uses **Azure SQL Database**.
+
 ### API
 
-The production API is hosted on Azure App Service.
+[https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net](https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net)
 
-```text
-https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net
-```
+### Swagger UI
+
+[https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net/swagger](https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net/swagger)
+
+Swagger provides an interactive interface for exploring and testing the API endpoints.
+
+### Scalar API Reference
+
+[https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net/scalar/v1](https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net/scalar/v1)
+
+Scalar provides a modern API reference interface for browsing the available endpoints and schemas.
 
 ### Health Check
 
-```text
-https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net/health
-```
+[https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net/health](https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net/health)
 
 A healthy deployment returns:
 

@@ -1,51 +1,157 @@
-# LibraryApi
+# Library Management System API
 
-A RESTful Library Management API built with **ASP.NET Core and .NET 10**.
+A production-ready Library Management REST API built with **ASP.NET Core and .NET 10**.
 
-The project provides authentication, role-based authorization, book and member management, loan workflows, loan requests, extension requests, pagination, validation, logging, health checks, automated tests, and Docker support.
+The project demonstrates a complete backend development workflow including authentication, authorization, business rules, automated testing, Docker containerization, cloud deployment, database hosting, health checks, and CI/CD.
 
-## Technologies
+The API is deployed to **Microsoft Azure** and uses **Azure SQL Database** in production.
+
+---
+
+# Live Deployment
+
+### API
+
+The production API is hosted on Azure App Service.
+
+```text
+https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net
+```
+
+### Health Check
+
+```text
+https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net/health
+```
+
+A healthy deployment returns:
+
+```text
+Healthy
+```
+
+The health check also verifies connectivity to the production database.
+
+---
+
+# Technologies
+
+## Backend
 
 - .NET 10
 - ASP.NET Core Web API
 - Entity Framework Core
 - SQL Server
-- JWT Authentication
-- ASP.NET Core Identity PasswordHasher
+- LINQ
+- RESTful API Design
+
+## Authentication & Authorization
+
+- JWT Bearer Authentication
+- Refresh Tokens
+- Refresh Token Rotation
+- Hashed Refresh Tokens
+- Role-Based Authorization
+- ASP.NET Core PasswordHasher
+
+## Application Infrastructure
+
 - FluentValidation
 - AutoMapper
+- Custom Exception Middleware
+- Structured Logging
+- Health Checks
+
+## Testing
+
 - xUnit
+- WebApplicationFactory
 - EF Core InMemory
+- Unit Tests
+- Integration Tests
+
+## DevOps & Deployment
+
 - Docker
 - Docker Compose
+- GitHub Actions
+- OpenID Connect (OIDC)
+- Azure App Service
+- Azure SQL Database
+
+## API Documentation
+
 - Swagger / OpenAPI
+- Scalar API Reference
 
 ---
 
-## Features
+# Repository Structure
 
-### Authentication
+```text
+AspNetCore-LibraryApi-V1/
+│
+├── .github/
+│   └── workflows/
+│       └── main_libraryapplication-cb.yml
+│
+├── LibraryApi/
+│   ├── Controllers/
+│   ├── Data/
+│   ├── DTOs/
+│   ├── Exceptions/
+│   ├── Helpers/
+│   ├── Mappings/
+│   ├── Middleware/
+│   ├── Migrations/
+│   ├── Models/
+│   ├── Services/
+│   ├── Validators/
+│   ├── Dockerfile
+│   ├── docker-compose.yaml
+│   ├── LibraryApi.csproj
+│   └── Program.cs
+│
+├── LibraryApi.Tests/
+│   ├── Integration/
+│   ├── Unit/
+│   ├── Helpers/
+│   └── LibraryApi.Tests.csproj
+│
+├── LibraryApi.slnx
+└── README.md
+```
+
+The repository contains both the main API and its automated test project.
+
+---
+
+# Authentication
+
+The API supports:
 
 - User registration
 - Login
 - JWT access tokens
 - Refresh tokens
 - Refresh token rotation
-- Hashed refresh tokens
+- Hashed refresh token storage
 - Logout
 - Current authenticated user endpoint
 - Role-based authorization
 
-Roles:
+Available roles:
 
 ```text
 Admin
 Member
 ```
 
+A registered user receives the `Member` role by default.
+
 ---
 
-## Book Management
+# Book Management
 
 Admins can:
 
@@ -72,23 +178,23 @@ Loaned
 
 ---
 
-## Member Management
+# Member Management
 
 Admins can:
 
 - View members
 - Update members
 - Delete members
-- View a member's loan history
+- View member loan history
 - Search members
 - Sort members
 - Use pagination
 
-Each registered member is linked to a `User` through a one-to-one relationship.
+Each registered member is connected to a `User` using a one-to-one relationship.
 
 ---
 
-## Loan Management
+# Loan Management
 
 The API supports:
 
@@ -98,7 +204,7 @@ The API supports:
 - Active loan monitoring
 - Overdue loan monitoring
 - Member-specific loan history
-- Search
+- Searching
 - Filtering
 - Sorting
 - Pagination
@@ -113,7 +219,7 @@ Overdue
 
 ---
 
-## Loan Requests
+# Loan Requests
 
 Members can request available books.
 
@@ -133,7 +239,7 @@ Loan → Active
 Book → Loaned
 ```
 
-If the admin rejects the request:
+If the request is rejected:
 
 ```text
 Loan Request → Rejected
@@ -150,11 +256,11 @@ Rejected
 
 ---
 
-## Loan Extension Requests
+# Loan Extension Requests
 
-Members can request an extension for an active loan.
+Members can request an extension for active loans.
 
-If approved:
+If the request is approved:
 
 ```text
 DueDate = DueDate + 7 days
@@ -170,11 +276,11 @@ Rejected
 
 ---
 
-## Business Rules
+# Business Rules
 
-The API enforces several library rules.
+The application includes domain-level business constraints rather than only CRUD operations.
 
-### Maximum Loans
+## Maximum Active Loans
 
 A member can have at most:
 
@@ -182,26 +288,30 @@ A member can have at most:
 3 unreturned loans
 ```
 
-The rule is checked when:
+This rule is validated when:
 
 - A member creates a loan request
 - An admin approves a loan request
 - An admin manually creates a loan
 
-### Overdue Loan Restriction
+---
 
-A member with an overdue book cannot receive or request another book.
+## Overdue Loan Restriction
 
-The application checks the actual due date:
+Members with overdue loans cannot receive or request another book.
+
+Overdue detection is based on the actual loan state:
 
 ```csharp
 loan.ReturnDate == null &&
 loan.DueDate < DateTime.UtcNow
 ```
 
-This prevents stale loan status values from bypassing the rule.
+This prevents stale status values from bypassing the business rule.
 
-### Maximum Extensions
+---
+
+## Maximum Extensions
 
 Each loan can have at most:
 
@@ -209,15 +319,17 @@ Each loan can have at most:
 2 approved extensions
 ```
 
-### Overdue Extension Restriction
+---
+
+## Overdue Extension Restriction
 
 A loan cannot be extended after its due date has passed.
 
 ---
 
-## Pagination, Search and Sorting
+# Pagination, Search, Filtering and Sorting
 
-Main collection endpoints support query parameters.
+Collection endpoints support query parameters.
 
 Example:
 
@@ -225,7 +337,7 @@ Example:
 GET /api/Books?page=1&pageSize=10&search=Dune&status=1&sortBy=title&descending=false
 ```
 
-Paged responses use the following structure:
+Paged responses follow this structure:
 
 ```json
 {
@@ -237,7 +349,7 @@ Paged responses use the following structure:
 }
 ```
 
-Pagination is available for:
+Pagination is implemented for:
 
 ```text
 Books
@@ -251,11 +363,11 @@ Overdue Loans
 
 ---
 
-## Authorization
+# Authorization
 
 The API uses JWT Bearer authentication.
 
-### Member Operations
+## Member Operations
 
 Members can:
 
@@ -266,7 +378,7 @@ Members can:
 - Create loan extension requests
 - View their own pending extension requests
 
-### Admin Operations
+## Admin Operations
 
 Admins can:
 
@@ -279,11 +391,11 @@ Admins can:
 - View overdue loans
 - Approve or reject loan requests
 - Approve or reject extension requests
-- View admin statistics
+- View administrative statistics
 
 ---
 
-## Admin Statistics
+# Admin Statistics
 
 Admins can access:
 
@@ -291,7 +403,7 @@ Admins can access:
 GET /api/Admin/statistics
 ```
 
-The response includes:
+Statistics include:
 
 ```text
 Total Books
@@ -305,7 +417,41 @@ Pending Extension Requests
 
 ---
 
-## Global Exception Handling
+# Validation
+
+Request validation is implemented using **FluentValidation**.
+
+Validation is applied to DTOs before business logic is executed.
+
+Examples include:
+
+- Required fields
+- Maximum string lengths
+- Identifier validation
+- Pagination validation
+- Request-specific rules
+
+Invalid requests return appropriate `400 Bad Request` responses.
+
+---
+
+# DTO Mapping
+
+The application uses **AutoMapper** to map between:
+
+```text
+Entities
+   ↕
+DTOs
+   ↕
+API Responses
+```
+
+This prevents database entities from being directly exposed by API endpoints.
+
+---
+
+# Global Exception Handling
 
 The API uses custom exception middleware.
 
@@ -318,13 +464,13 @@ Typical mappings:
 | `NotFoundException` | 404 |
 | Unexpected Exception | 500 |
 
-Unexpected errors are logged through `ILogger`.
+Unexpected errors are logged using `ILogger`.
 
 ---
 
-## Logging
+# Logging
 
-Structured logging is used for important state-changing operations.
+Structured logging is used for important application events.
 
 Examples include:
 
@@ -341,24 +487,43 @@ Approve / Reject Extension Request
 Unexpected Application Errors
 ```
 
-Sensitive information such as passwords, password hashes, access tokens, refresh tokens, and JWT secrets is not logged.
+Sensitive values are never intentionally logged.
+
+Examples:
+
+```text
+Passwords
+Password hashes
+JWT secrets
+Access tokens
+Refresh tokens
+```
 
 ---
 
-# Testing
+# Automated Testing
 
-The solution contains a separate xUnit test project:
+The repository contains a separate test project:
 
 ```text
 LibraryApi.Tests
 ```
 
-The test suite includes both unit and integration tests.
+The current test suite contains:
+
+```text
+Total:   113
+Passed:  112
+Skipped: 1
+Failed:  0
+```
+
+The suite contains both **unit tests** and **integration tests**.
 
 Covered areas include:
 
 - Authentication
-- JWT
+- JWT generation
 - Refresh token rotation
 - Authorization
 - Books
@@ -376,13 +541,9 @@ Covered areas include:
 - Admin statistics
 - Complete API workflows
 
-The test suite currently contains more than 100 automated tests.
+---
 
-Run all tests with:
-
-```bash
-dotnet test
-```
+## Integration Testing
 
 Integration tests use:
 
@@ -391,7 +552,139 @@ WebApplicationFactory
 Entity Framework Core InMemory
 ```
 
-and do not modify the development SQL Server database.
+The integration environment uses an isolated in-memory database.
+
+Therefore automated tests do not modify the development or production SQL Server database.
+
+---
+
+## Run Tests
+
+From the repository root:
+
+```bash
+dotnet test ./LibraryApi.slnx
+```
+
+Release configuration:
+
+```bash
+dotnet test ./LibraryApi.slnx --configuration Release
+```
+
+---
+
+# CI/CD
+
+The repository uses **GitHub Actions** for continuous integration and continuous deployment.
+
+Every push to:
+
+```text
+main
+```
+
+triggers the deployment workflow.
+
+Pipeline:
+
+```text
+Push to main
+      ↓
+Checkout Repository
+      ↓
+Restore Dependencies
+      ↓
+Build Solution
+      ↓
+Run 113 Automated Tests
+      ↓
+Publish API
+      ↓
+Create Deployment Artifact
+      ↓
+Authenticate to Azure using OIDC
+      ↓
+Deploy to Azure App Service
+```
+
+If the build or any automated test fails:
+
+```text
+Deployment is stopped.
+```
+
+This prevents broken application code from being automatically deployed to production.
+
+---
+
+# Azure Authentication for CI/CD
+
+GitHub Actions authenticates to Azure using:
+
+```text
+OpenID Connect (OIDC)
+```
+
+A user-assigned managed identity is used instead of storing a long-lived Azure password or deployment credential in the repository.
+
+The deployment identity only has access to the required Azure App Service resource.
+
+---
+
+# Azure Deployment
+
+Production architecture:
+
+```text
+Client / Future Frontend
+          │
+          │ HTTPS
+          ▼
+┌─────────────────────────┐
+│ Azure App Service       │
+│ LibraryApi              │
+│ ASP.NET Core / .NET 10  │
+└────────────┬────────────┘
+             │
+             │ SQL Connection
+             ▼
+┌─────────────────────────┐
+│ Azure SQL Database      │
+│ LibraryDb               │
+└─────────────────────────┘
+```
+
+Production configuration such as JWT secrets and database credentials is stored using Azure App Service environment configuration.
+
+Secrets are not committed to the repository.
+
+---
+
+# Configuration and Secrets
+
+Different environments use different configuration sources.
+
+```text
+Local Development
+→ .NET User Secrets
+
+Docker
+→ .env
+
+Azure Production
+→ Azure App Service Environment Variables
+```
+
+Sensitive values such as:
+
+```text
+JWT keys
+Database passwords
+Connection strings containing credentials
+```
+
+must never be committed to Git.
 
 ---
 
@@ -399,7 +692,7 @@ and do not modify the development SQL Server database.
 
 The API and SQL Server can run together using Docker Compose.
 
-Architecture:
+Docker architecture:
 
 ```text
 Browser / Client
@@ -407,25 +700,25 @@ Browser / Client
        │ localhost:8080
        ▼
 ┌─────────────────────┐
-│   LibraryApi        │
-│   ASP.NET Core      │
-│   Container         │
+│ LibraryApi          │
+│ ASP.NET Core        │
+│ Container           │
 └─────────┬───────────┘
           │
-          │ Docker network
+          │ Docker Network
           ▼
 ┌─────────────────────┐
-│   SQL Server 2022   │
-│   Container         │
+│ SQL Server 2022     │
+│ Container           │
 └─────────┬───────────┘
           │
           ▼
-    Docker Volume
+     Docker Volume
 ```
 
 ---
 
-## Docker Requirements
+# Docker Requirements
 
 Install:
 
@@ -438,7 +731,7 @@ Verify Docker:
 docker --version
 ```
 
-You can also test the Docker engine with:
+Test the Docker engine:
 
 ```bash
 docker run hello-world
@@ -446,18 +739,18 @@ docker run hello-world
 
 ---
 
-## Environment Variables
+# Docker Environment Variables
 
-Copy:
-
-```text
-.env.example
-```
-
-and create:
+Docker configuration uses:
 
 ```text
 .env
+```
+
+A safe example configuration is provided through:
+
+```text
+.env.example
 ```
 
 Example:
@@ -470,13 +763,19 @@ JWT_ISSUER=LibraryApi
 JWT_AUDIENCE=LibraryApiClient
 ```
 
-The `.env` file is excluded from Git.
+The real `.env` file is excluded from Git.
 
 Never commit real passwords or JWT secrets.
 
 ---
 
-## Start with Docker Compose
+# Start with Docker Compose
+
+Navigate to the API project directory:
+
+```bash
+cd LibraryApi
+```
 
 Build and start the API and SQL Server:
 
@@ -484,7 +783,7 @@ Build and start the API and SQL Server:
 docker compose up -d --build
 ```
 
-If the application code has not changed and the image already exists:
+If the application image already exists:
 
 ```bash
 docker compose up -d
@@ -498,29 +797,25 @@ docker compose ps
 
 ---
 
-## Stop Docker Services
-
-When development is finished:
+# Stop Docker Services
 
 ```bash
 docker compose down
 ```
 
-This removes the API and SQL Server containers but keeps the database volume.
+This removes the running API and SQL Server containers while keeping the database volume.
 
-Database data remains available the next time the application starts.
-
-Do **not** normally use:
+Do not normally use:
 
 ```bash
 docker compose down -v
 ```
 
-because `-v` also deletes the database volume.
+because `-v` also deletes the persisted SQL Server volume.
 
 ---
 
-## Docker Logs
+# Docker Logs
 
 API logs:
 
@@ -542,15 +837,15 @@ docker compose logs -f
 
 ---
 
-## Docker Resource Usage
+# Docker Resource Usage
 
-View running container resource usage:
+View resource usage:
 
 ```bash
 docker stats
 ```
 
-View Docker disk usage:
+View disk usage:
 
 ```bash
 docker system df
@@ -562,62 +857,64 @@ View Docker volumes:
 docker volume ls
 ```
 
-When Docker is no longer needed, Docker Desktop can be closed.
-
-On Windows, WSL can also be completely stopped with:
+On Windows, the WSL backend can be completely stopped with:
 
 ```powershell
 wsl --shutdown
 ```
 
-Docker Desktop will start its WSL backend again the next time Docker is launched.
+Docker Desktop will restart WSL when Docker is launched again.
 
 ---
 
-## SQL Server
+# Docker SQL Server
 
-Docker exposes SQL Server on:
+Docker exposes SQL Server through:
 
 ```text
 localhost,1433
 ```
 
-It can be accessed from SQL Server Management Studio using:
+Example SSMS configuration:
 
 ```text
 Server: localhost,1433
 Authentication: SQL Server Authentication
 Login: sa
-Password: value from MSSQL_SA_PASSWORD
+Password: MSSQL_SA_PASSWORD value
 ```
 
-If necessary, enable:
+If necessary:
 
 ```text
-Trust Server Certificate
+Trust Server Certificate = True
 ```
 
-Inside the Docker network, the API does not use `localhost`.
-
-It connects to SQL Server through the Compose service name:
+Inside the Docker network, the API connects using the Compose service name:
 
 ```text
-Server=sqlserver,1433
+sqlserver
+```
+
+rather than:
+
+```text
+localhost
 ```
 
 ---
 
-## Database Persistence
+# Database Persistence
 
-SQL Server data is stored in a Docker volume.
+Docker SQL Server data is stored in a persistent volume.
 
-This means:
+Therefore:
 
 ```bash
 docker compose down
 ```
 
-does not delete:
+does not remove data such as:
 
 ```text
 Users
@@ -628,39 +925,39 @@ Loan Requests
 Extension Requests
 ```
 
-The volume consumes disk space only while containers are stopped; it does not consume CPU or RAM by itself.
+The Docker volume consumes disk space but does not consume CPU or RAM while containers are stopped.
 
 ---
 
 # Entity Framework Core Migrations
 
-Database schema changes are managed with EF Core migrations.
+Database schema changes are managed using EF Core migrations.
 
 Create a migration:
 
 ```bash
-dotnet ef migrations add MigrationName
+dotnet ef migrations add MigrationName --project ./LibraryApi/LibraryApi.csproj
 ```
 
 Apply migrations:
 
 ```bash
-dotnet ef database update
+dotnet ef database update --project ./LibraryApi/LibraryApi.csproj
 ```
 
-For a Docker SQL Server running on port `1433`, the connection string can temporarily be overridden from PowerShell:
+For Docker SQL Server, the connection string can temporarily be overridden:
 
 ```powershell
 $env:ConnectionStrings__LibraryDb="Server=localhost,1433;Database=LibraryDb;User Id=sa;Password=YOUR_PASSWORD;TrustServerCertificate=True;Encrypt=True"
 ```
 
-Then run:
+Then:
 
 ```powershell
-dotnet ef database update
+dotnet ef database update --project ./LibraryApi/LibraryApi.csproj
 ```
 
-Afterwards, remove the temporary environment variable:
+Remove the temporary variable afterwards:
 
 ```powershell
 Remove-Item Env:ConnectionStrings__LibraryDb
@@ -676,13 +973,19 @@ The API exposes:
 GET /health
 ```
 
-Example:
+Local Docker example:
 
 ```text
 http://localhost:8080/health
 ```
 
-A healthy application returns:
+Production example:
+
+```text
+https://libraryapplication-cb-gdfwakbcarfqfuda.italynorth-01.azurewebsites.net/health
+```
+
+A successful health check returns:
 
 ```text
 Healthy
@@ -696,19 +999,17 @@ with:
 
 The health check also verifies database connectivity.
 
-If SQL Server becomes unavailable, the health endpoint reports the application as unhealthy.
-
 ---
 
 # Swagger
 
-When running in the Development environment:
+Swagger is enabled in the **Development** environment.
+
+Docker/local example:
 
 ```text
 http://localhost:8080/swagger
 ```
-
-Swagger can be used to test authentication and API endpoints.
 
 Typical authentication flow:
 
@@ -724,89 +1025,116 @@ Authorize with Bearer Token
 Use Protected Endpoints
 ```
 
----
-
-# Useful Docker Commands
-
-```bash
-# Start
-docker compose up -d
-
-# Start and rebuild after code changes
-docker compose up -d --build
-
-# Stop everything while keeping database data
-docker compose down
-
-# Check Compose services
-docker compose ps
-
-# Check all running containers
-docker ps
-
-# Check all containers
-docker ps -a
-
-# View API logs
-docker compose logs api
-
-# Follow logs
-docker compose logs -f
-
-# Check RAM and CPU usage
-docker stats
-
-# List images
-docker images
-
-# List volumes
-docker volume ls
-
-# Check Docker disk usage
-docker system df
-```
+Swagger is not enabled by default in the Azure production environment.
 
 ---
 
 # Running Without Docker
 
-The project can also be run directly with .NET:
+From the repository root:
 
 ```bash
-dotnet restore
-dotnet run
+dotnet restore ./LibraryApi.slnx
+dotnet run --project ./LibraryApi/LibraryApi.csproj
 ```
 
-In this mode, the connection string from the local application configuration is used.
+Local development configuration can be supplied through `.NET User Secrets`.
+
+---
+
+# Build
+
+Build the complete solution:
+
+```bash
+dotnet build ./LibraryApi.slnx
+```
+
+Release build:
+
+```bash
+dotnet build ./LibraryApi.slnx --configuration Release
+```
 
 ---
 
 # Project Goals
 
-LibraryApi was built as a practical backend project demonstrating:
+The project was developed to demonstrate practical backend engineering concepts including:
 
 ```text
 ASP.NET Core Web API
+.NET 10
 RESTful API Design
 Entity Framework Core
 SQL Server
+LINQ
 Authentication
 Authorization
 JWT
 Refresh Tokens
 DTOs
-Validation
+FluentValidation
 AutoMapper
 Middleware
-Logging
+Structured Logging
 Business Rules
 Pagination
 Filtering
+Searching
 Sorting
-Automated Testing
+Unit Testing
+Integration Testing
 Docker
 Docker Compose
 Health Checks
+Azure App Service
+Azure SQL Database
+GitHub Actions
+CI/CD
+OpenID Connect
+Cloud Deployment
 ```
 
-The project is designed to demonstrate a realistic backend architecture rather than only basic CRUD operations.
+The project goes beyond basic CRUD operations and demonstrates a realistic backend development lifecycle:
+
+```text
+Design
+  ↓
+Implementation
+  ↓
+Database
+  ↓
+Authentication
+  ↓
+Business Rules
+  ↓
+Automated Testing
+  ↓
+Containerization
+  ↓
+Cloud Deployment
+  ↓
+CI/CD
+```
+
+---
+
+# Future Development
+
+A frontend application is planned for the project.
+
+The frontend will communicate with the deployed API over HTTPS and will provide separate experiences for:
+
+```text
+Members
+Admins
+```
+
+The backend is designed to remain independently deployable and reusable by different clients.
+
+---
+
+# License
+
+This project is intended for educational and portfolio purposes.

@@ -1,6 +1,6 @@
 # Library Management System API
 
-A production-ready Library Management REST API built with **ASP.NET Core and .NET 10**.
+A production-ready Library Management REST API built with **ASP.NET Core and .NET 10**..
 
 The project demonstrates a complete backend development workflow including authentication, authorization, business rules, automated testing, Docker containerization, cloud deployment, database hosting, health checks, and CI/CD.
 

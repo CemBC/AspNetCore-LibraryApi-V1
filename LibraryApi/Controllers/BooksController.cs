@@ -10,7 +10,6 @@ using System.Security.Claims;
 
 namespace LibraryApi.Controllers;
 
-[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class BooksController : ControllerBase

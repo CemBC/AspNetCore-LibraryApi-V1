@@ -18,13 +18,157 @@ namespace LibraryApi.Controllers
 
         private readonly IValidator<LoginRequest> _loginRequestValidator;
 
-        public AuthController(IAuthService authService, IValidator<RegisterRequest> registerRequestValidator, IValidator<LoginRequest> loginRequestValidator)
+        private readonly IValidator<UpdateProfileRequest> _updateProfileValidator;
+
+        private readonly IValidator<ChangePasswordRequest> _changePasswordRequestValidator;
+
+        private readonly IValidator<ForgotPasswordRequest> _forgotPasswordRequestValidator;
+        private readonly IValidator<ResetPasswordRequest> _resetPasswordRequestValidator;
+
+        private readonly IValidator<VerifyEmailRequest> _verifyEmailRequestValidator;
+        private readonly IValidator<ResendVerificationRequest> _resendVerificationRequestValidator;
+
+        private readonly IValidator<SendChangePasswordCodeRequest> _sendChangePasswordCodeRequestValidator;
+
+
+        public AuthController(IAuthService authService, IValidator<RegisterRequest> registerRequestValidator, 
+            IValidator<LoginRequest> loginRequestValidator, IValidator<UpdateProfileRequest> updateProfileValidator,
+            IValidator<ChangePasswordRequest> changePasswordRequestValidator , IValidator<ForgotPasswordRequest> forgotPasswordRequestValidator,
+            IValidator<ResetPasswordRequest> resetPasswordRequestValidator, IValidator<VerifyEmailRequest> verifyEmailRequestValidator,
+            IValidator<ResendVerificationRequest> resendVerificationRequestValidator,IValidator<SendChangePasswordCodeRequest> sendChangePasswordCodeRequestValidator )
         {
             _authService = authService;
             _registerRequestValidator = registerRequestValidator;
             _loginRequestValidator = loginRequestValidator;
+            _updateProfileValidator = updateProfileValidator;
+            _changePasswordRequestValidator = changePasswordRequestValidator;
+            _forgotPasswordRequestValidator = forgotPasswordRequestValidator;
+            _resetPasswordRequestValidator = resetPasswordRequestValidator;
+            _verifyEmailRequestValidator = verifyEmailRequestValidator;
+            _resendVerificationRequestValidator = resendVerificationRequestValidator;
+            _sendChangePasswordCodeRequestValidator = sendChangePasswordCodeRequestValidator;
         }
 
+
+        [Authorize]
+        [HttpPost("change-password/code")]
+        public async Task<IActionResult> SendChangePasswordCode(SendChangePasswordCodeRequest request)
+        {
+            var validationResult =
+                await _sendChangePasswordCodeRequestValidator.ValidateAsync(request);
+
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors);
+            }
+
+            string? userId =
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userId is null)
+            {
+                return Unauthorized();
+            }
+
+            await _authService.SendChangePasswordCodeAsync(
+                int.Parse(userId),
+                request);
+
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpPut("change-password")]
+        public async Task<IActionResult> ChangePassword(ChangePasswordRequest request)
+        {
+            var validationResult =
+                await _changePasswordRequestValidator.ValidateAsync(request);
+
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors);
+            }
+
+            string? userId =
+                User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userId is null)
+            {
+                return Unauthorized();
+            }
+
+            await _authService.ChangePasswordAsync(
+                int.Parse(userId),
+                request);
+
+            return NoContent();
+        }
+
+
+
+        [HttpPost("forgot-password")]
+        public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+        {
+            var validationResult = await _forgotPasswordRequestValidator.ValidateAsync(request);
+
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors);
+            }
+
+            await _authService.SendForgotPasswordCodeAsync(request.Email);
+
+            return NoContent();
+        }
+
+        
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
+        {
+            var validationResult =await _resetPasswordRequestValidator.ValidateAsync(request);
+
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors);
+            }
+
+            await _authService.ResetPasswordAsync(request);
+
+            return NoContent();
+        }
+
+
+
+        [HttpPost("verify-email")]
+        public async Task<IActionResult> VerifyEmail(VerifyEmailRequest request)
+        {
+            var validationResult = await _verifyEmailRequestValidator.ValidateAsync(request);
+
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors);
+            }
+
+            await _authService.VerifyEmailAsync(request);
+
+            return NoContent();
+        }
+
+
+        [HttpPost("resend-verification")]
+        public async Task<IActionResult> ResendVerification(ResendVerificationRequest request)
+        {
+            var validationResult = await _resendVerificationRequestValidator.ValidateAsync(request);
+
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors);
+            }
+
+            await _authService.ResendVerificationCodeAsync(request.Email);
+
+            return NoContent();
+        }
 
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponse>> Login(LoginRequest request)
@@ -54,6 +198,25 @@ namespace LibraryApi.Controllers
                 await _authService.GetCurrentUserAsync(
                     int.Parse(userId));
 
+
+            return Ok(response);
+        }
+
+        [Authorize]
+        [HttpPut("me")]
+        public async Task<ActionResult<CurrentUserResponse> > UpdateProfile( UpdateProfileRequest request)
+        {
+            string? userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userId is null) return Unauthorized();
+            
+
+            var validationResult = await _updateProfileValidator.ValidateAsync(request);
+
+            if (!validationResult.IsValid) return BadRequest(validationResult.Errors);
+            
+
+            CurrentUserResponse response = await _authService.UpdateProfileAsync(int.Parse(userId),request);
 
             return Ok(response);
         }

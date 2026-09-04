@@ -1,6 +1,5 @@
 ﻿using LibraryApi.Data;
 using LibraryApi.DTOs.Admin;
-using LibraryApi.Models;
 using LibraryApi.Models.Status;
 using Microsoft.EntityFrameworkCore;
 
@@ -21,17 +20,25 @@ public class AdminService
         {
             TotalBooks = await _context.Books.CountAsync(),
 
-            AvailableBooks = await _context.Books.CountAsync(b => b.Status == BookStatus.Available),
+            AvailableBooks = await _context.Books
+                .CountAsync(b => b.Status == BookStatus.Available),
+
+            LoanedBooks = await _context.Books
+                .CountAsync(b => b.Status == BookStatus.Loaned),
 
             TotalMembers = await _context.Members.CountAsync(),
 
-            ActiveLoans = await _context.Loans.CountAsync(l => l.Status == LoanStatus.Active),
+            ActiveLoans = await _context.Loans
+                .CountAsync(l => l.Status == LoanStatus.Active),
 
-            OverdueLoans = await _context.Loans.CountAsync(l => l.Status == LoanStatus.Overdue),
+            OverdueLoans = await _context.Loans
+                .CountAsync(l => l.Status == LoanStatus.Overdue),
 
-            PendingLoanRequests = await _context.LoanRequest.CountAsync(r => r.Status == LoanRequestStatus.Pending),
+            PendingLoanRequests = await _context.LoanRequest
+                .CountAsync(r => r.Status == LoanRequestStatus.Pending),
 
-            PendingExtensionRequests = await _context.LoanExtensionRequest.CountAsync(r => r.Status == LoanExtensionStatus.Pending)
+            PendingExtensionRequests = await _context.LoanExtensionRequest
+                .CountAsync(r => r.Status == LoanExtensionStatus.Pending)
         };
 
         return response;

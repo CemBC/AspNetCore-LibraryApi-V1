@@ -6,6 +6,7 @@ using LibraryApi.Middleware;
 using LibraryApi.Models;
 using LibraryApi.Services;
 using LibraryApi.Services.Interfaces;
+using LibraryApi.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -52,6 +53,19 @@ builder.Services
             };
     });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("Frontend", policy =>
+    {
+        policy
+            .WithOrigins("http://localhost:5173")
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
+
+
+
 builder.Services.AddAuthorization();
 
 builder.Services.AddDbContext<LibraryDbContext>(options =>
@@ -66,6 +80,11 @@ builder.Services.AddScoped<LoanService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<AdminService>(); 
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+
+builder.Services.Configure<EmailSettings>(
+    builder.Configuration.GetSection("Email"));
+
+builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 builder.Services
     .AddHealthChecks()
@@ -111,6 +130,8 @@ var app = builder.Build();
 app.UseHttpsRedirection();
 
 app.UseMiddleware<ExceptionMiddleware>();
+
+app.UseCors("Frontend");
 
 app.UseAuthentication();
 

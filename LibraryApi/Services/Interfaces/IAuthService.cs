@@ -13,4 +13,18 @@ public interface IAuthService
     Task LogoutAsync(int UserId);
 
     Task<CurrentUserResponse> GetCurrentUserAsync(int userId);
+
+    Task<CurrentUserResponse> UpdateProfileAsync(int userId, UpdateProfileRequest request);
+
+    Task VerifyEmailAsync(VerifyEmailRequest request);
+
+    Task ResendVerificationCodeAsync(string email);
+
+    Task SendForgotPasswordCodeAsync(string email);
+
+    Task ResetPasswordAsync(ResetPasswordRequest request);
+
+    Task SendChangePasswordCodeAsync(int userId,SendChangePasswordCodeRequest request);
+
+    Task ChangePasswordAsync(int userId,ChangePasswordRequest request);
 }

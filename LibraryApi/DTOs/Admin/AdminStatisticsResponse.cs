@@ -9,4 +9,6 @@ public class AdminStatisticsResponse
     public int OverdueLoans { get; set; }
     public int PendingLoanRequests { get; set; }
     public int PendingExtensionRequests { get; set; }
+
+    public int LoanedBooks { get; set; }
 }

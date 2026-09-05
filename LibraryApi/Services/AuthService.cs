@@ -38,6 +38,175 @@ namespace LibraryApi.Services
             _emailService = emailService;
         }
 
+        public async Task<CurrentUserResponse> ChangeEmailAsync( int userId, ChangeEmailRequest request)
+        {
+            User? user = await _context.Users
+                .Include(u => u.Member)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user is null)
+            {
+                throw new NotFoundException("User not found");
+            }
+
+            string newEmail = request.NewEmail.Trim();
+
+            bool emailExists = await _context.Users
+                .AnyAsync(u =>
+                    u.Email == newEmail &&
+                    u.Id != userId);
+
+            if (emailExists)
+            {
+                throw new BadRequestException(
+                    "A user with this email already exists");
+            }
+
+            string codeHash = TokenHasher.Hash(request.Code);
+
+            VerificationCode? verificationCode = await _context.VerificationCodes
+                .Where(x =>
+                    x.UserId == user.Id &&
+                    x.Purpose == VerificationPurpose.EmailChange &&
+                    x.TargetEmail == newEmail &&
+                    x.CodeHash == codeHash &&
+                    x.UsedAt == null)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (verificationCode is null)
+            {
+                throw new BadRequestException(
+                    "Invalid verification code");
+            }
+
+            if (verificationCode.ExpiresAt <= DateTime.UtcNow)
+            {
+                throw new BadRequestException(
+                    "Verification code has expired");
+            }
+
+            verificationCode.UsedAt = DateTime.UtcNow;
+
+            user.Email = newEmail;
+
+            user.RefreshTokenHash = null;
+            user.RefreshTokenExpiryTime = null;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Email changed successfully for user {UserId}.",
+                user.Id);
+
+            return new CurrentUserResponse
+            {
+                Id = user.Id,
+                Email = user.Email,
+                Role = user.Role,
+                MemberId = user.Member?.Id,
+                FullName = user.Member?.FullName
+            };
+        }
+
+        public async Task SendChangeEmailCodeAsync(int userId, SendChangeEmailCodeRequest request)
+        {
+            User? user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user is null)
+            {
+                throw new NotFoundException("User not found");
+            }
+
+            string newEmail = request.NewEmail.Trim();
+
+            if (string.Equals(
+                user.Email,
+                newEmail,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                throw new BadRequestException(
+                    "New email must be different from current email");
+            }
+
+            bool emailExists = await _context.Users
+                .AnyAsync(u =>
+                    u.Email == newEmail &&
+                    u.Id != userId);
+
+            if (emailExists)
+            {
+                throw new BadRequestException(
+                    "A user with this email already exists");
+            }
+
+            VerificationCode? latestCode = await _context.VerificationCodes
+                .Where(x =>
+                    x.UserId == user.Id &&
+                    x.Purpose == VerificationPurpose.EmailChange)
+                .OrderByDescending(x => x.CreatedAt)
+                .FirstOrDefaultAsync();
+
+            if (
+                latestCode is not null &&
+                latestCode.CreatedAt > DateTime.UtcNow.AddMinutes(-1))
+            {
+                throw new BadRequestException(
+                    "Please wait before requesting another verification code");
+            }
+
+            List<VerificationCode> oldCodes = await _context.VerificationCodes
+                .Where(x =>
+                    x.UserId == user.Id &&
+                    x.Purpose == VerificationPurpose.EmailChange &&
+                    x.UsedAt == null)
+                .ToListAsync();
+
+            foreach (VerificationCode oldCode in oldCodes)
+            {
+                oldCode.UsedAt = DateTime.UtcNow;
+            }
+
+            string code = CreateVerificationCode();
+
+            VerificationCode verificationCode = new VerificationCode
+            {
+                UserId = user.Id,
+                CodeHash = TokenHasher.Hash(code),
+                Purpose = VerificationPurpose.EmailChange,
+                TargetEmail = newEmail,
+                CreatedAt = DateTime.UtcNow,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(10)
+            };
+
+            await _context.VerificationCodes.AddAsync(verificationCode);
+            await _context.SaveChangesAsync();
+
+            string html = $"""
+        <h2>Library Email Change</h2>
+
+        <p>We received a request to change your Library account email address.</p>
+
+        <p>Your verification code is:</p>
+
+        <h1>{code}</h1>
+
+        <p>This code will expire in 10 minutes.</p>
+
+        <p>If you did not request this change, you can ignore this email.</p>
+        """;
+
+            await _emailService.SendAsync(
+                newEmail,
+                "Confirm your new Library email address",
+                html);
+
+            _logger.LogInformation(
+                "Email change verification code sent for user {UserId}.",
+                user.Id);
+        }
+
         public async Task SendChangePasswordCodeAsync(int userId,SendChangePasswordCodeRequest request)
         {
             User? user = await _context.Users
@@ -592,9 +761,8 @@ namespace LibraryApi.Services
             };
         }
 
-        public async Task<CurrentUserResponse> UpdateProfileAsync(
-    int userId,
-    UpdateProfileRequest request)
+
+        public async Task<CurrentUserResponse> UpdateProfileAsync(int userId, UpdateProfileRequest request)
         {
             User? user = await _context.Users
                 .Include(u => u.Member)
@@ -602,32 +770,15 @@ namespace LibraryApi.Services
 
             if (user is null)
             {
-                throw new NotFoundException(
-                    "User not found");
+                throw new NotFoundException("User not found");
             }
 
             if (user.Member is null)
             {
-                throw new NotFoundException(
-                    "Member profile not found");
+                throw new NotFoundException("Member profile not found");
             }
 
-            bool emailExists =
-                await _context.Users.AnyAsync(u =>
-                    u.Email == request.Email &&
-                    u.Id != userId);
-
-            if (emailExists)
-            {
-                throw new BadRequestException(
-                    "A user with this email already exists");
-            }
-
-            user.Email =
-                request.Email.Trim();
-
-            user.Member.FullName =
-                request.FullName.Trim();
+            user.Member.FullName = request.FullName.Trim();
 
             await _context.SaveChangesAsync();
 
@@ -644,12 +795,6 @@ namespace LibraryApi.Services
                 FullName = user.Member.FullName
             };
         }
-
-
-
-
-
-
 
         public async Task<AuthResponse> RefreshTokenAsync(RefreshTokenRequest request)
         {

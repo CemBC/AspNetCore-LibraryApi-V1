@@ -37,6 +37,32 @@ public class BooksController : ControllerBase
         _bookQueryValidator = bookQueryValidator;
     }
 
+    [Authorize(Roles = "Admin")]
+    [HttpPost("{id:int}/image")]
+    [Consumes("multipart/form-data")]
+    public async Task<ActionResult<object>> UploadImage(int id, IFormFile image)
+    {
+        string imageUrl = await _bookService.UploadImageAsync(
+            id,
+            image,
+            CurrentUserId);
+
+        return Ok(new
+        {
+            imageUrl
+        });
+    }
+
+
+    [Authorize(Roles = "Admin")]
+    [HttpDelete("{id:int}/image")]
+    public async Task<IActionResult> DeleteImage(int id)
+    {
+        await _bookService.DeleteImageAsync(id,CurrentUserId);
+
+        return NoContent();
+    }
+
 
 
 

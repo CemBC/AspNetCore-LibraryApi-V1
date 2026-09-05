@@ -18,6 +18,10 @@ public class VerificationCodeConfiguration
         builder.Property(x => x.Purpose)
             .IsRequired();
 
+        builder.Property(x => x.TargetEmail)
+            .HasMaxLength(200)
+            .IsRequired(false);
+
         builder.Property(x => x.CreatedAt)
             .IsRequired();
 

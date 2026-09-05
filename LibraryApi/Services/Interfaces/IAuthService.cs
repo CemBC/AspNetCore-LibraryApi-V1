@@ -27,4 +27,8 @@ public interface IAuthService
     Task SendChangePasswordCodeAsync(int userId,SendChangePasswordCodeRequest request);
 
     Task ChangePasswordAsync(int userId,ChangePasswordRequest request);
+
+    Task SendChangeEmailCodeAsync(int userId, SendChangeEmailCodeRequest request);
+
+    Task<CurrentUserResponse> ChangeEmailAsync(int userId, ChangeEmailRequest request);
 }

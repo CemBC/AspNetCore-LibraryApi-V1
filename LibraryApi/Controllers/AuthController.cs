@@ -29,13 +29,18 @@ namespace LibraryApi.Controllers
         private readonly IValidator<ResendVerificationRequest> _resendVerificationRequestValidator;
 
         private readonly IValidator<SendChangePasswordCodeRequest> _sendChangePasswordCodeRequestValidator;
+        
+        private readonly IValidator<SendChangeEmailCodeRequest> _sendChangeEmailCodeRequestValidator;
+
+        private readonly IValidator<ChangeEmailRequest> _changeEmailRequestValidator;
 
 
         public AuthController(IAuthService authService, IValidator<RegisterRequest> registerRequestValidator, 
             IValidator<LoginRequest> loginRequestValidator, IValidator<UpdateProfileRequest> updateProfileValidator,
             IValidator<ChangePasswordRequest> changePasswordRequestValidator , IValidator<ForgotPasswordRequest> forgotPasswordRequestValidator,
             IValidator<ResetPasswordRequest> resetPasswordRequestValidator, IValidator<VerifyEmailRequest> verifyEmailRequestValidator,
-            IValidator<ResendVerificationRequest> resendVerificationRequestValidator,IValidator<SendChangePasswordCodeRequest> sendChangePasswordCodeRequestValidator )
+            IValidator<ResendVerificationRequest> resendVerificationRequestValidator,IValidator<SendChangePasswordCodeRequest> sendChangePasswordCodeRequestValidator,
+            IValidator<SendChangeEmailCodeRequest> sendChangeEmailCodeRequestValidator, IValidator<ChangeEmailRequest> changeEmailRequestValidator)
         {
             _authService = authService;
             _registerRequestValidator = registerRequestValidator;
@@ -47,6 +52,54 @@ namespace LibraryApi.Controllers
             _verifyEmailRequestValidator = verifyEmailRequestValidator;
             _resendVerificationRequestValidator = resendVerificationRequestValidator;
             _sendChangePasswordCodeRequestValidator = sendChangePasswordCodeRequestValidator;
+            _sendChangeEmailCodeRequestValidator = sendChangeEmailCodeRequestValidator;
+            _changeEmailRequestValidator = changeEmailRequestValidator;
+        }
+
+        [Authorize]
+        [HttpPost("change-email/code")]
+        public async Task<IActionResult> SendChangeEmailCode(SendChangeEmailCodeRequest request)
+        {
+            var validationResult = await _sendChangeEmailCodeRequestValidator.ValidateAsync(request);
+
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors);
+            }
+
+            string? userId =User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userId is null)
+            {
+                return Unauthorized();
+            }
+
+            await _authService.SendChangeEmailCodeAsync(int.Parse(userId), request);
+
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpPut("change-email")]
+        public async Task<ActionResult<CurrentUserResponse>> ChangeEmail(ChangeEmailRequest request)
+        {
+            var validationResult =await _changeEmailRequestValidator.ValidateAsync(request);
+
+            if (!validationResult.IsValid)
+            {
+                return BadRequest(validationResult.Errors);
+            }
+
+            string? userId =User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
+            if (userId is null)
+            {
+                return Unauthorized();
+            }
+
+            CurrentUserResponse response =await _authService.ChangeEmailAsync(int.Parse(userId),request);
+
+            return Ok(response);
         }
 
 

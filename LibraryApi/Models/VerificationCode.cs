@@ -12,6 +12,8 @@ public class VerificationCode
 
     public VerificationPurpose Purpose { get; set; }
 
+    public string? TargetEmail { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime ExpiresAt { get; set; }

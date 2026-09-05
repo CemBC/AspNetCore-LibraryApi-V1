@@ -10,5 +10,9 @@ public class BookResponse
 
     public string Author { get; set; } = string.Empty;
 
+    public string Description { get; set; } = string.Empty;
+
+    public string? ImageUrl { get; set; }
+
     public BookStatus Status { get; set; }
 }

@@ -21,7 +21,8 @@ builder.Services.AddControllers();
 
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
-builder.Services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
+builder.Services.AddAutoMapper(cfg =>
+    cfg.AddProfile<MappingProfile>());
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -53,18 +54,20 @@ builder.Services
             };
     });
 
+string frontendUrl =
+    builder.Configuration["Frontend:Url"]
+    ?? "http://localhost:5173";
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("Frontend", policy =>
     {
         policy
-            .WithOrigins("http://localhost:5173")
+            .WithOrigins(frontendUrl)
             .AllowAnyHeader()
             .AllowAnyMethod();
     });
 });
-
-
 
 builder.Services.AddAuthorization();
 
@@ -72,14 +75,17 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
     options.UseSqlServer(
         builder.Configuration.GetConnectionString("LibraryDb")));
 
-builder.Services.AddScoped<ILoanExtensionService,LoanExtensionService>();
-builder.Services.AddScoped<ILoanRequestService,LoanRequestService>();
+builder.Services.AddScoped<ILoanExtensionService, LoanExtensionService>();
+builder.Services.AddScoped<ILoanRequestService, LoanRequestService>();
 builder.Services.AddScoped<BookService>();
 builder.Services.AddScoped<MemberService>();
 builder.Services.AddScoped<LoanService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<AdminService>(); 
-builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
+builder.Services.AddScoped<AdminService>();
+
+builder.Services.AddScoped<
+    IPasswordHasher<User>,
+    PasswordHasher<User>>();
 
 builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("Email"));
@@ -89,15 +95,17 @@ builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 builder.Services.Configure<AzureBlobStorageSettings>(
     builder.Configuration.GetSection("BlobStorage"));
 
-builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+builder.Services.AddScoped<
+    IBlobStorageService,
+    BlobStorageService>();
 
 builder.Services
     .AddHealthChecks()
     .AddDbContextCheck<LibraryDbContext>();
 
-
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition(
@@ -120,17 +128,14 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 
-var app = builder.Build();  
+var app = builder.Build();
 
-//if (app.Environment.IsDevelopment())
-//{
-    app.MapOpenApi();
+app.MapOpenApi();
 
-    app.UseSwagger();
-    app.UseSwaggerUI();
+app.UseSwagger();
+app.UseSwaggerUI();
 
-    app.MapScalarApiReference();
-//}
+app.MapScalarApiReference();
 
 app.UseHttpsRedirection();
 
@@ -144,6 +149,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapHealthChecks("/health").AllowAnonymous();
+app.MapHealthChecks("/health")
+    .AllowAnonymous();
 
 app.Run();

@@ -87,7 +87,7 @@ builder.Services.Configure<EmailSettings>(
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
 
 builder.Services.Configure<AzureBlobStorageSettings>(
-    builder.Configuration.GetSection("AzureBlobStorage"));
+    builder.Configuration.GetSection("BlobStorage"));
 
 builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
 

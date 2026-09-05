@@ -5,6 +5,7 @@ using LibraryApi.DTOs.Loans;
 using LibraryApi.DTOs.Members;
 using LibraryApi.Exceptions;
 using LibraryApi.Models;
+using LibraryApi.Models.Status;
 using LibraryApi.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -141,6 +142,18 @@ public class MemberService
         if (member is null)
         {
             throw new NotFoundException("Member not found.");
+        }
+
+        bool hasActiveLoan = await _context.Loans
+            .AnyAsync(l =>
+                l.MemberId == id &&
+                (l.Status == LoanStatus.Active ||
+                 l.Status == LoanStatus.Overdue));
+
+        if (hasActiveLoan)
+        {
+            throw new BadRequestException(
+                "Member cannot be deleted while they have an active loan.");
         }
 
         _context.Members.Remove(member);

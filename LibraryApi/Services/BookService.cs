@@ -4,6 +4,7 @@ using LibraryApi.DTOs.Books;
 using LibraryApi.DTOs.Common;
 using LibraryApi.Exceptions;
 using LibraryApi.Models;
+using LibraryApi.Models.Status;
 using LibraryApi.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -237,23 +238,32 @@ public class BookService
     }
 
 
-    public async Task Delete(int id , int UserId)
+    public async Task Delete(int id, int UserId)
     {
         Book? book = await _context.Books.FindAsync(id);
-
 
         if (book is null)
             throw new NotFoundException("Book not found.");
 
+        bool hasActiveLoan = await _context.Loans
+            .AnyAsync(l =>
+                l.BookId == id &&
+                (l.Status == LoanStatus.Active ||
+                 l.Status == LoanStatus.Overdue));
+
+        if (hasActiveLoan)
+        {
+            throw new BadRequestException(
+                "Book cannot be deleted while it has an active loan.");
+        }
 
         _context.Books.Remove(book);
 
-        
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Book with ID: {BookId} deleted by the User with ID:{UserID}",
+        _logger.LogInformation(
+            "Book with ID: {BookId} deleted by the User with ID:{UserID}",
             book.Id,
             UserId);
-
     }
 }

@@ -148,7 +148,8 @@ public class ValidatorTests
         var result = validator.Validate(new UpdateBookRequest
         {
             Title = "Dune",
-            Author = "Frank Herbert"
+            Author = "Frank Herbert",
+            Description = "Science fiction novel."
         });
 
         Assert.True(result.IsValid);

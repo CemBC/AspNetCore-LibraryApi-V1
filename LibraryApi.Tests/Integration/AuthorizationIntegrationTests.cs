@@ -43,7 +43,8 @@ public class AuthorizationIntegrationTests
             new CreateBookRequest
             {
                 Title = "Member Cannot Create",
-                Author = "Author"
+                Author = "Author",
+                Description = "Test description."
             });
 
         Assert.Equal(HttpStatusCode.Forbidden, memberResponse.StatusCode);
@@ -56,7 +57,8 @@ public class AuthorizationIntegrationTests
             new CreateBookRequest
             {
                 Title = "Admin Can Create",
-                Author = "Author"
+                Author = "Author",
+                Description = "Test description."
             });
 
         Assert.Equal(HttpStatusCode.Created, adminResponse.StatusCode);

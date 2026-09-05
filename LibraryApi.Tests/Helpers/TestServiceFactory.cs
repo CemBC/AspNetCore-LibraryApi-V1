@@ -4,11 +4,13 @@ using LibraryApi.Mappings;
 using LibraryApi.Models;
 using LibraryApi.Models.Status;
 using LibraryApi.Services;
+using LibraryApi.Services.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 
 namespace LibraryApi.Tests.Helpers;
 
@@ -24,7 +26,6 @@ internal static class TestServiceFactory
         LibraryDbContext context = new(options);
         context.Database.EnsureCreated();
 
-        // BookConfiguration contains seed data. Unit tests should start from a clean DB.
         if (context.Books.Any())
         {
             context.Books.RemoveRange(context.Books);
@@ -37,10 +38,12 @@ internal static class TestServiceFactory
     public static IMapper CreateMapper()
     {
         ServiceCollection services = new();
+
         services.AddLogging();
         services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
 
         ServiceProvider provider = services.BuildServiceProvider();
+
         return provider.GetRequiredService<IMapper>();
     }
 
@@ -48,7 +51,8 @@ internal static class TestServiceFactory
     {
         Dictionary<string, string?> values = new()
         {
-            ["Jwt:Key"] = "LibraryApi.Tests.SuperSecretJwtSigningKey.0123456789.abcdefghijklmnopqrstuvwxyz",
+            ["Jwt:Key"] =
+                "LibraryApi.Tests.SuperSecretJwtSigningKey.0123456789.abcdefghijklmnopqrstuvwxyz",
             ["Jwt:Issuer"] = "LibraryApi.Tests",
             ["Jwt:Audience"] = "LibraryApi.Tests.Clients",
             ["Jwt:RefreshTokenDays"] = "7"
@@ -60,18 +64,20 @@ internal static class TestServiceFactory
     }
 
     public static async Task<(User User, Member Member)> AddMemberAsync(
-        LibraryDbContext context,
-        string email = "member@test.com",
-        string fullName = "Test Member",
-        string password = "Secret123!",
-        string role = "Member")
+    LibraryDbContext context,
+    string email = "member@test.com",
+    string fullName = "Test Member",
+    string password = "Secret123!",
+    string role = "Member",
+    bool isEmailVerified = true)
     {
         PasswordHasher<User> hasher = new();
 
         User user = new()
         {
             Email = email,
-            Role = role
+            Role = role,
+            IsEmailVerified = isEmailVerified
         };
 
         user.PasswordHash = hasher.HashPassword(user, password);
@@ -122,11 +128,13 @@ internal static class TestServiceFactory
         {
             Title = title,
             Author = author,
+            Description = "Test book description.",
             Status = status
         };
 
         context.Books.Add(book);
         context.SaveChanges();
+
         return book;
     }
 
@@ -152,6 +160,7 @@ internal static class TestServiceFactory
 
         context.Loans.Add(loan);
         context.SaveChanges();
+
         return loan;
     }
 
@@ -169,13 +178,16 @@ internal static class TestServiceFactory
             MemberId = member.Id,
             Book = book,
             Member = member,
-            LoanCode = code ?? $"LR-{Guid.NewGuid():N}"[..9].ToUpperInvariant(),
+            LoanCode =
+                code ??
+                $"LR-{Guid.NewGuid():N}"[..9].ToUpperInvariant(),
             RequestDate = requestDate ?? DateTime.UtcNow,
             Status = status
         };
 
         context.LoanRequest.Add(request);
         context.SaveChanges();
+
         return request;
     }
 
@@ -198,28 +210,59 @@ internal static class TestServiceFactory
 
         context.LoanExtensionRequest.Add(request);
         context.SaveChanges();
+
         return request;
     }
 
-    public static AuthService CreateAuthService(LibraryDbContext context)
+    public static AuthService CreateAuthService(
+        LibraryDbContext context)
     {
+        Mock<IEmailService> emailServiceMock = new();
+
         return new AuthService(
             context,
             new PasswordHasher<User>(),
             CreateConfiguration(),
-            NullLogger<AuthService>.Instance);
+            NullLogger<AuthService>.Instance,
+            emailServiceMock.Object);
     }
 
-    public static BookService CreateBookService(LibraryDbContext context) =>
-        new(context, CreateMapper(), NullLogger<BookService>.Instance);
+    public static BookService CreateBookService(
+        LibraryDbContext context)
+    {
+        Mock<IBlobStorageService> blobStorageServiceMock = new();
 
-    public static MemberService CreateMemberService(LibraryDbContext context) =>
-        new(context, CreateMapper(), NullLogger<MemberService>.Instance);
+        return new BookService(
+            context,
+            CreateMapper(),
+            NullLogger<BookService>.Instance,
+            blobStorageServiceMock.Object);
+    }
 
-    public static LoanService CreateLoanService(LibraryDbContext context) =>
-        new(context, CreateMapper(), NullLogger<LoanService>.Instance);
+    public static MemberService CreateMemberService(
+        LibraryDbContext context)
+    {
+        Mock<IEmailService> emailServiceMock = new();
 
-    public static LoanRequestService CreateLoanRequestService(LibraryDbContext context)
+        return new MemberService(
+            context,
+            CreateMapper(),
+            NullLogger<MemberService>.Instance,
+            new PasswordHasher<User>(),
+            emailServiceMock.Object);
+    }
+
+    public static LoanService CreateLoanService(
+        LibraryDbContext context)
+    {
+        return new LoanService(
+            context,
+            CreateMapper(),
+            NullLogger<LoanService>.Instance);
+    }
+
+    public static LoanRequestService CreateLoanRequestService(
+        LibraryDbContext context)
     {
         LoanService loanService = CreateLoanService(context);
 
@@ -230,6 +273,12 @@ internal static class TestServiceFactory
             NullLogger<LoanRequestService>.Instance);
     }
 
-    public static LoanExtensionService CreateLoanExtensionService(LibraryDbContext context) =>
-        new(context, CreateMapper(), NullLogger<LoanExtensionService>.Instance);
+    public static LoanExtensionService CreateLoanExtensionService(
+        LibraryDbContext context)
+    {
+        return new LoanExtensionService(
+            context,
+            CreateMapper(),
+            NullLogger<LoanExtensionService>.Instance);
+    }
 }

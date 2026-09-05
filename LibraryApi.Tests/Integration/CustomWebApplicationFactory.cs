@@ -3,7 +3,9 @@ using LibraryApi.Data;
 using LibraryApi.Models;
 using LibraryApi.Models.Status;
 using LibraryApi.Services;
+using LibraryApi.Services.Interfaces;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -11,6 +13,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Moq;
 
 namespace LibraryApi.Tests.Integration;
 
@@ -23,71 +26,66 @@ public sealed class CustomWebApplicationFactory
     public string DatabaseName { get; } =
         $"LibraryApiTests-{Guid.NewGuid()}";
 
-    protected override void ConfigureWebHost(
-        IWebHostBuilder builder)
+    protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
 
-        builder.UseSetting(
-            "Jwt:Key",
-            JwtKey);
+        builder.UseSetting("Jwt:Key", JwtKey);
+        builder.UseSetting("Jwt:Issuer", "LibraryApi.Tests");
+        builder.UseSetting("Jwt:Audience", "LibraryApi.Tests.Clients");
+        builder.UseSetting("Jwt:RefreshTokenDays", "7");
 
-        builder.UseSetting(
-            "Jwt:Issuer",
-            "LibraryApi.Tests");
+        builder.ConfigureAppConfiguration((_, config) =>
+        {
+            config.AddInMemoryCollection(
+                new Dictionary<string, string?>
+                {
+                    ["Jwt:Key"] = JwtKey,
+                    ["Jwt:Issuer"] = "LibraryApi.Tests",
+                    ["Jwt:Audience"] = "LibraryApi.Tests.Clients",
+                    ["Jwt:RefreshTokenDays"] = "7"
+                });
+        });
 
-        builder.UseSetting(
-            "Jwt:Audience",
-            "LibraryApi.Tests.Clients");
+        builder.ConfigureServices(services =>
+        {
+            services.RemoveAll<LibraryDbContext>();
+            services.RemoveAll<DbContextOptions<LibraryDbContext>>();
+            services.RemoveAll<
+                IDbContextOptionsConfiguration<LibraryDbContext>>();
 
-        builder.UseSetting(
-            "Jwt:RefreshTokenDays",
-            "7");
-
-        builder.ConfigureAppConfiguration(
-            (_, config) =>
+            services.AddDbContext<LibraryDbContext>(options =>
             {
-                config.AddInMemoryCollection(
-                    new Dictionary<string, string?>
-                    {
-                        ["Jwt:Key"] = JwtKey,
-                        ["Jwt:Issuer"] = "LibraryApi.Tests",
-                        ["Jwt:Audience"] = "LibraryApi.Tests.Clients",
-                        ["Jwt:RefreshTokenDays"] = "7"
-                    });
+                options.UseInMemoryDatabase(DatabaseName);
             });
 
-        builder.ConfigureServices(
-            services =>
-            {
-                services.RemoveAll<LibraryDbContext>();
+            services.RemoveAll<IBlobStorageService>();
 
-                services.RemoveAll<
-                    DbContextOptions<LibraryDbContext>>();
+            Mock<IBlobStorageService> blobStorageMock = new();
 
-                services.RemoveAll<
-                    IDbContextOptionsConfiguration<LibraryDbContext>>();
+            blobStorageMock
+                .Setup(service =>
+                    service.UploadBookImageAsync(It.IsAny<IFormFile>()))
+                .ReturnsAsync(
+                    "https://test-storage.local/test-image.jpg");
 
-                services.AddDbContext<LibraryDbContext>(
-                    options =>
-                    {
-                        options.UseInMemoryDatabase(
-                            DatabaseName);
-                    });
+            blobStorageMock
+                .Setup(service =>
+                    service.DeleteAsync(It.IsAny<string>()))
+                .Returns(Task.CompletedTask);
 
-                services.TryAddScoped<AdminService>();
-            });
+            services.AddSingleton(blobStorageMock.Object);
+
+            services.TryAddScoped<AdminService>();
+        });
     }
-
 
     public async Task ResetDatabaseAsync()
     {
-        using IServiceScope scope =
-            Services.CreateScope();
+        using IServiceScope scope = Services.CreateScope();
 
         LibraryDbContext context =
-            scope.ServiceProvider
-                .GetRequiredService<LibraryDbContext>();
+            scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
 
         await context.Database.EnsureDeletedAsync();
         await context.Database.EnsureCreatedAsync();
@@ -113,33 +111,29 @@ public sealed class CustomWebApplicationFactory
         await context.SaveChangesAsync();
     }
 
-
     public async Task<(User User, Member Member)> SeedMemberAsync(
         string email = "member@test.com",
         string password = "Secret123!",
-        string fullName = "Test Member")
+        string fullName = "Test Member",
+        bool isEmailVerified = true)
     {
-        using IServiceScope scope =
-            Services.CreateScope();
+        using IServiceScope scope = Services.CreateScope();
 
         LibraryDbContext context =
-            scope.ServiceProvider
-                .GetRequiredService<LibraryDbContext>();
+            scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
 
         IPasswordHasher<User> hasher =
-            scope.ServiceProvider
-                .GetRequiredService<IPasswordHasher<User>>();
+            scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
 
         User user = new()
         {
             Email = email,
-            Role = "Member"
+            Role = "Member",
+            IsEmailVerified = isEmailVerified
         };
 
         user.PasswordHash =
-            hasher.HashPassword(
-                user,
-                password);
+            hasher.HashPassword(user, password);
 
         Member member = new()
         {
@@ -157,32 +151,28 @@ public sealed class CustomWebApplicationFactory
         return (user, member);
     }
 
-
     public async Task<User> SeedAdminAsync(
         string email = "admin@test.com",
-        string password = "Secret123!")
+        string password = "Secret123!",
+        bool isEmailVerified = true)
     {
-        using IServiceScope scope =
-            Services.CreateScope();
+        using IServiceScope scope = Services.CreateScope();
 
         LibraryDbContext context =
-            scope.ServiceProvider
-                .GetRequiredService<LibraryDbContext>();
+            scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
 
         IPasswordHasher<User> hasher =
-            scope.ServiceProvider
-                .GetRequiredService<IPasswordHasher<User>>();
+            scope.ServiceProvider.GetRequiredService<IPasswordHasher<User>>();
 
         User admin = new()
         {
             Email = email,
-            Role = "Admin"
+            Role = "Admin",
+            IsEmailVerified = isEmailVerified
         };
 
         admin.PasswordHash =
-            hasher.HashPassword(
-                admin,
-                password);
+            hasher.HashPassword(admin, password);
 
         context.Users.Add(admin);
 
@@ -191,23 +181,21 @@ public sealed class CustomWebApplicationFactory
         return admin;
     }
 
-
     public async Task<Book> SeedBookAsync(
         string title = "Dune",
         string author = "Frank Herbert",
         BookStatus status = BookStatus.Available)
     {
-        using IServiceScope scope =
-            Services.CreateScope();
+        using IServiceScope scope = Services.CreateScope();
 
         LibraryDbContext context =
-            scope.ServiceProvider
-                .GetRequiredService<LibraryDbContext>();
+            scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
 
         Book book = new()
         {
             Title = title,
             Author = author,
+            Description = "Test book description.",
             Status = status
         };
 
@@ -218,7 +206,6 @@ public sealed class CustomWebApplicationFactory
         return book;
     }
 
-
     public async Task<Loan> SeedLoanAsync(
         int bookId,
         int memberId,
@@ -226,21 +213,17 @@ public sealed class CustomWebApplicationFactory
         DateTime? dueDate = null,
         DateTime? returnDate = null)
     {
-        using IServiceScope scope =
-            Services.CreateScope();
+        using IServiceScope scope = Services.CreateScope();
 
         LibraryDbContext context =
-            scope.ServiceProvider
-                .GetRequiredService<LibraryDbContext>();
+            scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
 
         Loan loan = new()
         {
             BookId = bookId,
             MemberId = memberId,
             LoanDate = DateTime.UtcNow.AddDays(-1),
-            DueDate =
-                dueDate ??
-                DateTime.UtcNow.AddDays(6),
+            DueDate = dueDate ?? DateTime.UtcNow.AddDays(6),
             ReturnDate = returnDate,
             Status = status
         };
@@ -252,20 +235,16 @@ public sealed class CustomWebApplicationFactory
         return loan;
     }
 
-
     public async Task<LoanRequest> SeedLoanRequestAsync(
         int bookId,
         int memberId,
-        LoanRequestStatus status =
-            LoanRequestStatus.Pending,
+        LoanRequestStatus status = LoanRequestStatus.Pending,
         string loanCode = "LR-ABC123")
     {
-        using IServiceScope scope =
-            Services.CreateScope();
+        using IServiceScope scope = Services.CreateScope();
 
         LibraryDbContext context =
-            scope.ServiceProvider
-                .GetRequiredService<LibraryDbContext>();
+            scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
 
         LoanRequest request = new()
         {
@@ -283,20 +262,15 @@ public sealed class CustomWebApplicationFactory
         return request;
     }
 
-
-    public async Task<LoanExtensionRequest>
-        SeedExtensionRequestAsync(
-            int loanId,
-            int memberId,
-            LoanExtensionStatus status =
-                LoanExtensionStatus.Pending)
+    public async Task<LoanExtensionRequest> SeedExtensionRequestAsync(
+        int loanId,
+        int memberId,
+        LoanExtensionStatus status = LoanExtensionStatus.Pending)
     {
-        using IServiceScope scope =
-            Services.CreateScope();
+        using IServiceScope scope = Services.CreateScope();
 
         LibraryDbContext context =
-            scope.ServiceProvider
-                .GetRequiredService<LibraryDbContext>();
+            scope.ServiceProvider.GetRequiredService<LibraryDbContext>();
 
         LoanExtensionRequest request = new()
         {

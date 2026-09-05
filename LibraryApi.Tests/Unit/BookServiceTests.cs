@@ -20,37 +20,29 @@ public class BookServiceTests
         BookService service =
             TestServiceFactory.CreateBookService(context);
 
-        Book book =
-            await service.AddBook(
-                new CreateBookRequest
-                {
-                    Title = "Dune",
-                    Author = "Frank Herbert"
-                },
-                UserId: 99);
+        Book book = await service.AddBook(
+    new CreateBookRequest
+    {
+        Title = "Dune",
+        Author = "Frank Herbert",
+        Description = "Science fiction novel."
+    },
+    userId: 99);
 
         Book? dbBook =
             await context.Books.FindAsync(book.Id);
 
         Assert.NotNull(dbBook);
-
+        Assert.Equal(book.Id, dbBook.Id);
+        Assert.Equal("Dune", dbBook.Title);
+        Assert.Equal("Frank Herbert", dbBook.Author);
         Assert.Equal(
-            book.Id,
-            dbBook.Id);
-
-        Assert.Equal(
-            "Dune",
-            dbBook.Title);
-
-        Assert.Equal(
-            "Frank Herbert",
-            dbBook.Author);
-
+            "Science fiction novel.",
+            dbBook.Description);
         Assert.Equal(
             BookStatus.Available,
             dbBook.Status);
     }
-
 
     [Fact]
     public async Task GetById_WhenBookExists_ReturnsBook()
@@ -67,15 +59,9 @@ public class BookServiceTests
         Book result =
             await service.GetById(book.Id);
 
-        Assert.Equal(
-            book.Id,
-            result.Id);
-
-        Assert.Equal(
-            "Dune",
-            result.Title);
+        Assert.Equal(book.Id, result.Id);
+        Assert.Equal("Dune", result.Title);
     }
-
 
     [Fact]
     public async Task GetById_WhenBookDoesNotExist_ThrowsNotFoundException()
@@ -90,7 +76,6 @@ public class BookServiceTests
             service.GetById(999));
     }
 
-
     [Fact]
     public async Task Update_UpdatesTitleAndAuthor()
     {
@@ -104,28 +89,29 @@ public class BookServiceTests
             TestServiceFactory.AddBook(context);
 
         await service.Update(
-            book.Id,
-            new UpdateBookRequest
-            {
-                Title = "Dune Messiah",
-                Author = "Frank Herbert"
-            },
-            UserId: 99);
+    book.Id,
+    new UpdateBookRequest
+    {
+        Title = "Dune Messiah",
+        Author = "Frank Herbert",
+        Description = "Updated book description."
+    },
+    userId: 99);
 
         Book? dbBook =
             await context.Books.FindAsync(book.Id);
 
         Assert.NotNull(dbBook);
-
         Assert.Equal(
             "Dune Messiah",
             dbBook.Title);
-
         Assert.Equal(
             "Frank Herbert",
             dbBook.Author);
+        Assert.Equal(
+            "Updated book description.",
+            dbBook.Description);
     }
-
 
     [Fact]
     public async Task Delete_RemovesBook()
@@ -150,7 +136,6 @@ public class BookServiceTests
 
         Assert.Null(dbBook);
     }
-
 
     [Fact]
     public async Task GetAllAsync_AppliesSearchStatusSortingAndPagination()
@@ -199,8 +184,7 @@ public class BookServiceTests
             2,
             result.TotalPages);
 
-        Assert.Single(
-            result.Items);
+        Assert.Single(result.Items);
 
         Assert.Equal(
             "Dune Messiah",

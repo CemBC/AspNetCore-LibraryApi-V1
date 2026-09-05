@@ -41,10 +41,16 @@ public class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_WhenEmailExists_ThrowsBadRequestException()
     {
-        await using LibraryDbContext context = TestServiceFactory.CreateContext();
-        AuthService service = TestServiceFactory.CreateAuthService(context);
+        await using LibraryDbContext context =
+            TestServiceFactory.CreateContext();
 
-        await TestServiceFactory.AddMemberAsync(context, email: "duplicate@test.com");
+        AuthService service =
+            TestServiceFactory.CreateAuthService(context);
+
+        await TestServiceFactory.AddMemberAsync(
+            context,
+            email: "duplicate@test.com",
+            isEmailVerified: true);
 
         RegisterRequest request = new()
         {
@@ -53,7 +59,8 @@ public class AuthServiceTests
             FullName = "Duplicate User"
         };
 
-        await Assert.ThrowsAsync<BadRequestException>(() => service.RegisterAsync(request));
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            service.RegisterAsync(request));
     }
 
     [Fact]

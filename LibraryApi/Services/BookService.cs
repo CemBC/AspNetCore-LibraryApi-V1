@@ -10,7 +10,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace LibraryApi.Services;
 
-public class BookService
+public class BookService : IBookService
 {
     private readonly LibraryDbContext _context;
     private readonly IMapper _mapper;

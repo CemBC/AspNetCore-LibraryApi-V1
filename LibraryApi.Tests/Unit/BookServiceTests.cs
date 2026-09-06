@@ -11,6 +11,42 @@ namespace LibraryApi.Tests.Unit;
 
 public class BookServiceTests
 {
+
+    [Fact]
+    public async Task Delete_WhenBookHasActiveLoan_ThrowsBadRequestException()
+    {
+        await using LibraryDbContext context =
+            TestServiceFactory.CreateContext();
+
+        BookService service =
+            TestServiceFactory.CreateBookService(context);
+
+        (_, Member member) =
+            await TestServiceFactory.AddMemberAsync(context);
+
+        Book book =
+            TestServiceFactory.AddBook(
+                context,
+                status: BookStatus.Loaned);
+
+        TestServiceFactory.AddLoan(
+            context,
+            book,
+            member,
+            LoanStatus.Active);
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            service.Delete(
+                book.Id,
+                UserId: 99));
+
+        Book? dbBook =
+            await context.Books.FindAsync(book.Id);
+
+        Assert.NotNull(dbBook);
+    }
+
+
     [Fact]
     public async Task AddBook_CreatesAvailableBook()
     {

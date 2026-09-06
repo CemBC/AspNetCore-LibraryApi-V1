@@ -13,7 +13,7 @@ using System.Security.Cryptography;
 
 namespace LibraryApi.Services;
 
-public class MemberService
+public class MemberService :IMemberService
 {
     private readonly LibraryDbContext _context;
     private readonly IMapper _mapper;

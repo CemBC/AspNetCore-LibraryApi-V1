@@ -1,11 +1,12 @@
 ﻿using LibraryApi.Data;
 using LibraryApi.DTOs.Admin;
 using LibraryApi.Models.Status;
+using LibraryApi.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryApi.Services;
 
-public class AdminService
+public class AdminService : IAdminService
 {
     private readonly LibraryDbContext _context;
 

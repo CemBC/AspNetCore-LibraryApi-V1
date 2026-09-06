@@ -6,11 +6,12 @@ using LibraryApi.Exceptions;
 using LibraryApi.Helpers;
 using LibraryApi.Models;
 using LibraryApi.Models.Status;
+using LibraryApi.Services.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
 namespace LibraryApi.Services;
 
-public class LoanService
+public class LoanService : ILoanService
 {
     private readonly LibraryDbContext _context;
 

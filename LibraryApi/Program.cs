@@ -77,11 +77,11 @@ builder.Services.AddDbContext<LibraryDbContext>(options =>
 
 builder.Services.AddScoped<ILoanExtensionService, LoanExtensionService>();
 builder.Services.AddScoped<ILoanRequestService, LoanRequestService>();
-builder.Services.AddScoped<BookService>();
-builder.Services.AddScoped<MemberService>();
-builder.Services.AddScoped<LoanService>();
+builder.Services.AddScoped<IBookService, BookService>();
+builder.Services.AddScoped<IMemberService, MemberService>();
+builder.Services.AddScoped<ILoanService, LoanService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<AdminService>();
+builder.Services.AddScoped<IAdminService, AdminService>();
 
 builder.Services.AddScoped<
     IPasswordHasher<User>,

@@ -4,6 +4,7 @@ using LibraryApi.DTOs.Loans;
 using LibraryApi.DTOs.Members;
 using LibraryApi.Exceptions;
 using LibraryApi.Models;
+using LibraryApi.Models.Status;
 using LibraryApi.Services;
 using LibraryApi.Tests.Helpers;
 
@@ -11,6 +12,43 @@ namespace LibraryApi.Tests.Unit;
 
 public class MemberServiceTests
 {
+
+    [Fact]
+    public async Task DeleteAsync_WhenMemberHasActiveLoan_ThrowsBadRequestException()
+    {
+        await using LibraryDbContext context =
+            TestServiceFactory.CreateContext();
+
+        MemberService service =
+            TestServiceFactory.CreateMemberService(context);
+
+        (_, Member member) =
+            await TestServiceFactory.AddMemberAsync(context);
+
+        Book book =
+            TestServiceFactory.AddBook(
+                context,
+                status: BookStatus.Loaned);
+
+        TestServiceFactory.AddLoan(
+            context,
+            book,
+            member,
+            LoanStatus.Active);
+
+        await Assert.ThrowsAsync<BadRequestException>(() =>
+            service.DeleteAsync(
+                member.Id,
+                userId: 99));
+
+        Member? dbMember =
+            await context.Members.FindAsync(member.Id);
+
+        Assert.NotNull(dbMember);
+    }
+
+
+
     [Fact]
     public async Task GetAllAsync_AppliesSearchSortingAndPagination()
     {

@@ -16,12 +16,12 @@ public class LoanRequestService : ILoanRequestService
 {
     private readonly LibraryDbContext _context;
 
-    private readonly LoanService _loanService;
+    private readonly ILoanService _loanService;
     private readonly IMapper _mapper;
 
     private readonly ILogger<LoanRequestService> _logger;
 
-    public LoanRequestService(LibraryDbContext context ,IMapper mapper , LoanService loanService , ILogger<LoanRequestService> logger)
+    public LoanRequestService(LibraryDbContext context ,IMapper mapper , ILoanService loanService , ILogger<LoanRequestService> logger)
     {
         _context = context;
         _mapper = mapper;   

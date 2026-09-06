@@ -7,7 +7,7 @@ using LibraryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-
+using LibraryApi.Services.Interfaces;   
 
 namespace LibraryApi.Controllers;
 
@@ -19,14 +19,14 @@ public class LoansController : ControllerBase
     private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
 
-    private readonly LoanService _loanService;
+    private readonly ILoanService _loanService;
     private readonly IValidator<CreateLoanRequest> _loanValidator;
     private readonly IMapper _mapper;
     private readonly IValidator<LoanQuery> _loanQueryValidator;
 
 
     public LoansController(
-        LoanService loanService,
+        ILoanService loanService,
         IValidator<CreateLoanRequest> loanValidator,
         IMapper mapper,
         IValidator<LoanQuery> loanQueryValidator)

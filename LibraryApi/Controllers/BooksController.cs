@@ -7,7 +7,7 @@ using LibraryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-
+using LibraryApi.Services.Interfaces;
 namespace LibraryApi.Controllers;
 
 [ApiController]
@@ -15,7 +15,7 @@ namespace LibraryApi.Controllers;
 public class BooksController : ControllerBase
 {
     private int CurrentUserId => int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
-    private readonly BookService _bookService;
+    private readonly IBookService _bookService;
     private readonly IValidator<CreateBookRequest> _createValidator;
     private readonly IValidator<UpdateBookRequest> _updateValidator;
 
@@ -24,7 +24,7 @@ public class BooksController : ControllerBase
 
 
     public BooksController(
-        BookService bookService,
+        IBookService bookService,
         IValidator<CreateBookRequest> createValidator,
         IValidator<UpdateBookRequest> updateValidator,
         IMapper mapper,

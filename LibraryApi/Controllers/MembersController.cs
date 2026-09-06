@@ -8,7 +8,7 @@ using LibraryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
-
+using LibraryApi.Services.Interfaces;
 namespace LibraryApi.Controllers;
 
 [Authorize(Roles = "Admin")]
@@ -19,14 +19,14 @@ public class MembersController : ControllerBase
     private int CurrentUserId =>
         int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
 
-    private readonly MemberService _memberService;
+    private readonly IMemberService _memberService;
     private readonly IValidator<CreateMemberRequest> _createMemberValidator;
     private readonly IValidator<UpdateMemberRequest> _updateMemberValidator;
     private readonly IValidator<MemberQuery> _memberQueryValidator;
     private readonly IMapper _mapper;
 
     public MembersController(
-        MemberService memberService,
+       IMemberService memberService,
         IValidator<CreateMemberRequest> createMemberValidator,
         IValidator<UpdateMemberRequest> updateMemberValidator,
         IMapper mapper,

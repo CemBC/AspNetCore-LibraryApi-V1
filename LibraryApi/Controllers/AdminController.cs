@@ -2,7 +2,7 @@
 using LibraryApi.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-
+using LibraryApi.Services.Interfaces;
 namespace LibraryApi.Controllers;
 
 [ApiController]
@@ -10,9 +10,9 @@ namespace LibraryApi.Controllers;
 [Authorize(Roles = "Admin")]
 public class AdminController : ControllerBase
 {
-    private readonly AdminService _adminService;
+    private readonly IAdminService _adminService;
 
-    public AdminController(AdminService adminService)
+    public AdminController(IAdminService adminService)
     {
         _adminService = adminService;
     }
